@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hear-app-v0.0.6';
+const CACHE_NAME = 'hear-app-v0.0.7';
 const urlsToCache = [
     './',
     './index.html',

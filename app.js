@@ -363,7 +363,7 @@ class HearApp {
                     text: peerId,
                     width: 200,
                     height: 200,
-                    colorDark: '#ff0000',
+                    colorDark: '#000000',
                     colorLight: '#ffffff',
                     correctLevel: QRCode.CorrectLevel.M
                 });
@@ -392,8 +392,8 @@ class HearApp {
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, 200, 200);
             
-            // 赤い枠
-            ctx.fillStyle = '#ff0000';
+            // 黒い枠
+            ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, 200, 20);
             ctx.fillRect(0, 180, 200, 20);
             ctx.fillRect(0, 0, 20, 200);
@@ -420,8 +420,8 @@ class HearApp {
         } catch (fallbackError) {
             console.error('Fallback QR error:', fallbackError);
             container.innerHTML = `
-                <div style="background: white; border: 2px solid #ff0000; padding: 20px; border-radius: 10px; color: black; text-align: center;">
-                    <h3 style="color: #ff0000;">ピアID</h3>
+                <div style="background: white; border: 2px solid #000000; padding: 20px; border-radius: 10px; color: black; text-align: center;">
+                    <h3 style="color: #000000;">ピアID</h3>
                     <p style="font-family: monospace; word-break: break-all; margin: 10px 0;">${text}</p>
                     <small>QRコード生成エラー - 手動でピアIDを入力してください</small>
                 </div>
@@ -435,9 +435,21 @@ class HearApp {
         
         try {
             if (typeof Html5QrcodeScanner !== 'undefined') {
+                // QRスキャナーの設定を最適化
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0,
+                    disableFlip: false,
+                    videoConstraints: {
+                        facingMode: { ideal: "environment" } // バックカメラを優先
+                    },
+                    formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ]
+                };
+                
                 this.html5QrcodeScanner = new Html5QrcodeScanner(
                     'qr-reader',
-                    { fps: 10, qrbox: 250 },
+                    config,
                     false
                 );
                 
@@ -445,20 +457,86 @@ class HearApp {
                     (decodedText, decodedResult) => {
                         // QRコード読み取り成功
                         document.getElementById('clientPeerIdInput').value = decodedText;
-                        this.html5QrcodeScanner.clear();
-                        this.connectToHost();
-                        this.consoleLog(`QR code scanned: ${decodedText}`);
+                        this.html5QrcodeScanner.clear().then(() => {
+                            this.connectToHost();
+                            this.consoleLog(`QR code scanned: ${decodedText}`);
+                        }).catch(err => {
+                            console.warn('QR scanner clear warning:', err);
+                            this.connectToHost();
+                            this.consoleLog(`QR code scanned: ${decodedText}`);
+                        });
                     },
                     (error) => {
-                        // エラーは無視（通常のスキャン中のエラー）
+                        // 通常のスキャン中のエラーは無視
+                        // console.warn('QR scan warning:', error);
                     }
                 );
+                
+                this.consoleLog('QR scanner started with back camera preference');
+            } else if (typeof Html5Qrcode !== 'undefined') {
+                // Html5Qrcodeクラスを直接使用するフォールバック
+                this.startAlternativeQRScanner(qrReaderDiv);
             } else {
                 throw new Error('Html5QrcodeScanner library not loaded');
             }
         } catch (error) {
             console.error('QR scanner error:', error);
-            qrReaderDiv.innerHTML = '<p style="color: #ff0000;">QRスキャナー初期化エラー</p>';
+            this.consoleLog(`QR scanner error: ${error.message}`);
+            qrReaderDiv.innerHTML = '<p style="color: #ff0000;">QRスキャナー初期化エラー<br>カメラのアクセス許可を確認してください</p>';
+        }
+    }
+    
+    startAlternativeQRScanner(container) {
+        try {
+            container.innerHTML = '<div id="qr-reader-direct" style="width: 100%;"></div>';
+            
+            const html5QrCode = new Html5Qrcode("qr-reader-direct");
+            
+            // カメラの取得を試行
+            Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length) {
+                    // バックカメラを探す
+                    let cameraId = devices[0].id;
+                    for (let device of devices) {
+                        if (device.label.toLowerCase().includes('back') || 
+                            device.label.toLowerCase().includes('rear') ||
+                            device.label.toLowerCase().includes('environment')) {
+                            cameraId = device.id;
+                            break;
+                        }
+                    }
+                    
+                    // QRコードスキャン開始
+                    html5QrCode.start(
+                        cameraId,
+                        {
+                            fps: 10,
+                            qrbox: { width: 250, height: 250 }
+                        },
+                        (decodedText, decodedResult) => {
+                            document.getElementById('clientPeerIdInput').value = decodedText;
+                            html5QrCode.stop().then(() => {
+                                this.connectToHost();
+                                this.consoleLog(`QR code scanned (alternative): ${decodedText}`);
+                            });
+                        },
+                        (errorMessage) => {
+                            // エラーを無視
+                        }
+                    ).catch(err => {
+                        console.error('Alternative QR scanner start error:', err);
+                        container.innerHTML = '<p style="color: #ff0000;">カメラアクセスエラー</p>';
+                    });
+                    
+                    this.html5QrCode = html5QrCode; // クリーンアップ用に保存
+                }
+            }).catch(err => {
+                console.error('Camera detection error:', err);
+                container.innerHTML = '<p style="color: #ff0000;">カメラが見つかりません</p>';
+            });
+        } catch (error) {
+            console.error('Alternative QR scanner error:', error);
+            container.innerHTML = '<p style="color: #ff0000;">代替QRスキャナーエラー</p>';
         }
     }
     
@@ -520,8 +598,18 @@ class HearApp {
         
         // QRスキャナーをクリーンアップ
         if (this.html5QrcodeScanner) {
-            this.html5QrcodeScanner.clear();
+            this.html5QrcodeScanner.clear().catch(err => {
+                console.warn('QR scanner cleanup warning:', err);
+            });
             this.html5QrcodeScanner = null;
+        }
+        
+        // 代替QRスキャナーをクリーンアップ
+        if (this.html5QrCode) {
+            this.html5QrCode.stop().catch(err => {
+                console.warn('Alternative QR scanner cleanup warning:', err);
+            });
+            this.html5QrCode = null;
         }
     }
     

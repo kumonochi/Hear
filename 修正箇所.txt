@@ -1,22 +1,3 @@
 【修正箇所】（このファイルはgithubにアップロードしないこと）
-・タイトルのボタンはホラーらしく怪しく光でぼやけるようにすること。
-・以下のコンソールが表示されてQRコードが表示されない。関数が正しいかなど確認して修正すること。
-sw.js:12 [SW] Installing Service Worker
-sw.js:16 [SW] Caching app shell
-sw.js:26 [SW] Activating Service Worker
-sw.js:32 [SW] Deleting old cache: hear-app-v0.0.3
-html5-qrcode.min.js:1  Failed to load resource: the server responded with a status of 404 ()
-qrcode.min.js:1  Failed to load resource: the server responded with a status of 404 ()
-app.js:31 Service Worker registered: ServiceWorkerRegistration
-app.js:151 Peer ID: 72210d4a-18da-400d-8392-7c303399b421
-app.js:374 QR generation error: Error: QRCode library not loaded
-    at HearApp.generateQRCode (app.js:371:23)
-    at HTMLButtonElement.<anonymous> (app.js:100:60)
-generateQRCode @ app.js:374
-app.js:374 QR generation error: Error: QRCode library not loaded
-    at HearApp.generateQRCode (app.js:371:23)
-    at HTMLButtonElement.<anonymous> (app.js:100:60)
-generateQRCode @ app.js:374
-
-
+・QRコードの読み込みをしようとしても読み取りがされない。またデフォルトではバックカメラを起動するようにすること。なお、QRコードの表示は赤色でされているが、色が読み取りに影響を与えているのであれば黒色に変えること。
 ・修正を終えたらバージョンを0.0.1上げてgithubにプッシュすること（masterにアップ）

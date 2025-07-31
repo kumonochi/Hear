@@ -240,6 +240,67 @@
             color: rgba(255, 255, 255, 0.8);
         }
         
+        .device-selection {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        .device-select-btn {
+            padding: 20px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 15px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        
+        .device-select-btn:hover {
+            background: rgba(255, 0, 0, 1);
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .peer-info {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .peer-id-display {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 1.1rem;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        
+        .peer-input-field {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .peer-input-field::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .connection-status {
+            text-align: center;
+        }
+        
         .console {
             position: fixed;
             bottom: 0;
@@ -283,8 +344,14 @@
         <!-- タイトル画面 -->
         <div id="titleScreen" class="title-screen">
             <h1 class="title" id="titleText">Hear</h1>
-            <p style="font-size: 1.2rem; opacity: 0.7;">タップして開始</p>
-            <p style="font-size: 0.8rem; opacity: 0.4; margin-top: 20px;">v0.0.3</p>
+            <p style="font-size: 1.2rem; opacity: 0.7; margin-bottom: 40px;">ホラー着信アプリ</p>
+            
+            <div class="device-selection">
+                <button class="device-select-btn" id="hostDeviceBtn">操作デバイスにする</button>
+                <button class="device-select-btn" id="clientDeviceBtn">受信デバイスにする</button>
+            </div>
+            
+            <p style="font-size: 0.8rem; opacity: 0.4; margin-top: 20px;">v0.0.4</p>
         </div>
         
         <!-- セットアップ画面 -->
@@ -325,6 +392,43 @@
             <button class="control-btn disconnect-btn" id="disconnectBtn">接続を切る</button>
         </div>
         
+        <!-- ホスト（操作デバイス）画面 -->
+        <div id="hostScreen" class="control-screen">
+            <h2 style="margin-bottom: 30px;">操作デバイス</h2>
+            
+            <div class="peer-info">
+                <p style="opacity: 0.7; margin-bottom: 10px;">あなたのピアID:</p>
+                <div class="peer-id-display" id="hostPeerIdDisplay">接続中...</div>
+                <button class="control-btn" id="generateQRBtn">QRコードを表示</button>
+            </div>
+            
+            <div id="qrcode" style="display: flex; justify-content: center; margin: 20px 0;"></div>
+            
+            <div class="connection-status">
+                <p id="connectionStatus" style="opacity: 0.7; margin: 20px 0;">受信デバイスの接続を待っています...</p>
+            </div>
+            
+            <button class="control-btn disconnect-btn" id="hostBackBtn">タイトルに戻る</button>
+        </div>
+        
+        <!-- クライアント（受信デバイス）画面 -->
+        <div id="clientScreen" class="control-screen">
+            <h2 style="margin-bottom: 30px;">受信デバイス</h2>
+            
+            <div class="peer-input">
+                <p style="opacity: 0.7; margin-bottom: 10px;">操作デバイスのピアIDを入力:</p>
+                <input type="text" id="clientPeerIdInput" class="peer-input-field" placeholder="ピアIDを入力">
+                <button class="control-btn" id="connectToHostBtn">接続</button>
+            </div>
+            
+            <div class="qr-scanner">
+                <button class="control-btn" id="scanQRBtn">QRコードを読み取る</button>
+                <div id="qr-reader" style="width: 100%; margin: 20px 0;"></div>
+            </div>
+            
+            <button class="control-btn disconnect-btn" id="clientBackBtn">タイトルに戻る</button>
+        </div>
+        
         <!-- 受信デバイス待機画面 -->
         <div id="receiverScreen" class="control-screen">
             <h2 style="margin-bottom: 30px;">受信待機中</h2>
@@ -354,6 +458,13 @@
         <div class="console-output" id="consoleOutput"></div>
         <input type="text" class="console-input" id="consoleInput" placeholder="コマンドを入力...">
     </div>
+    
+    <!-- QRCode.js ライブラリ -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="https://unpkg.com/qrcode-js@1.0.0/qrcode.min.js"></script>
+    
+    <!-- HTML5 QR Code Scanner -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
     
     <script src="app.js"></script>
 </body>

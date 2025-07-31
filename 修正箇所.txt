@@ -1,23 +1,16 @@
 【修正箇所】（このファイルはgithubにアップロードしないこと）
-・コンソールの非表示について、×をおしても非表示にならないため修正すること。きちんと折り畳みもしくはコンソールの最小化ができるようにする。
-・P2P接続について以下のようなコンソールが表示されて正常に機能しないため、修正すること。現状の構造に問題がある場合はP2P接続ができることを優先し、もっとも適したかたちに修正すること。
+・タイトル画面に「受信デバイスにする」「操作デバイスにする」というボタンを作成する。
+・「操作デバイスにする」を押すと、ホスト側としてピアIDを表示する画面に移り、受信デバイスの接続を待つ。
+・「受信デバイスにする」を押すと、ピアIDの入力画面に移動する。
+・「操作デバイスにする」ではピアIDをQRコードにして表示するボタンを作成する。その逆で「受信デバイスにする」ではQRコードを読み取るボタンを作成し、コードを読み込むと自動でピアIDを入力し接続を開始する。以下に公式サイトのBasic Usagesとリポジトリを表示するので参考にすること。またどちらにも戻るボタンを作成しておくこと。
 
-app.js:45 Service Worker registration failed: TypeError: Failed to register a ServiceWorker for scope ('https://kumonochi.github.io/') with script ('https://kumonochi.github.io/sw.js'): A bad HTTP response code (404) was received when fetching the script.
-registerServiceWorker @ app.js:45
-Hear/:1 Error while trying to use the following icon from the Manifest: https://kumonochi.github.io/Hear/icon-192.png (Download error or resource isn't a valid image)
-Hear/:1 Access to fetch at 'https://peerjs-server.herokuapp.com/peerjs/id?ts=17539724595180.8052620548141449&version=1.4.7' from origin 'https://kumonochi.github.io' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
-peerjs-server.herokuapp.com/peerjs/id?ts=17539724595180.8052620548141449&version=1.4.7:1  Failed to load resource: net::ERR_FAILED
-logger.ts:64 ERROR PeerJS:  Error retrieving ID (TypeError) Failed to fetch
-(anonymous) @ logger.ts:64
-logger.ts:64 ERROR PeerJS:  Aborting!
-(anonymous) @ logger.ts:64
-logger.ts:64 ERROR PeerJS:  Error: (Error) Could not get an ID from the server. If you passed in a `path` to your self-hosted PeerServer, you'll also need to pass in that same path when creating a new Peer.
-(anonymous) @ logger.ts:64
-app.js:131 Peer error: Error: Could not get an ID from the server. If you passed in a `path` to your self-hosted PeerServer, you'll also need to pass in that same path when creating a new Peer.
-    at e.<anonymous> (api.ts:46:10)
-    at s (peerjs.min.js:1:133635)
-    at Object.throw (peerjs.min.js:1:132938)
-    at s (peerjs.min.js:1:132708)
-(anonymous) @ app.js:131
+【Basic Usages】
+<div id="qrcode"></div>
+<script type="text/javascript">
+new QRCode(document.getElementById("qrcode"), "http://jindo.dev.naver.com/collie");
+</script>
+
+【リポジトリ】
+https://github.com/davidshimjs/qrcodejs.git
 
 ・修正を終えたらバージョンを0.0.1上げてgithubにプッシュすること（masterにアップ）

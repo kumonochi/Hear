@@ -65,6 +65,19 @@ class HearApp {
         const consoleInput = document.getElementById('consoleInput');
         const consoleCloseBtn = document.getElementById('consoleCloseBtn');
         
+        // 新しいUI要素
+        const hostDeviceBtn = document.getElementById('hostDeviceBtn');
+        const clientDeviceBtn = document.getElementById('clientDeviceBtn');
+        const generateQRBtn = document.getElementById('generateQRBtn');
+        const scanQRBtn = document.getElementById('scanQRBtn');
+        const connectToHostBtn = document.getElementById('connectToHostBtn');
+        const hostBackBtn = document.getElementById('hostBackBtn');
+        const clientBackBtn = document.getElementById('clientBackBtn');
+        
+        // QR関連の変数
+        this.qrCodeInstance = null;
+        this.html5QrcodeScanner = null;
+        
         titleText.addEventListener('click', () => this.handleTitleClick());
         connectBtn.addEventListener('click', () => this.connectToPeer());
         receiverBtn.addEventListener('click', () => this.selectDevice('receiver'));
@@ -80,6 +93,15 @@ class HearApp {
         setCallerNameBtn.addEventListener('click', () => this.setCallerName());
         setupBackBtn.addEventListener('click', () => this.backToTitle());
         consoleCloseBtn.addEventListener('click', () => this.toggleConsole());
+        
+        // 新しいイベントリスナー
+        hostDeviceBtn.addEventListener('click', () => this.selectHostDevice());
+        clientDeviceBtn.addEventListener('click', () => this.selectClientDevice());
+        generateQRBtn.addEventListener('click', () => this.generateQRCode());
+        scanQRBtn.addEventListener('click', () => this.startQRScanner());
+        connectToHostBtn.addEventListener('click', () => this.connectToHost());
+        hostBackBtn.addEventListener('click', () => this.backToTitle());
+        clientBackBtn.addEventListener('click', () => this.backToTitle());
         
         consoleInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -228,14 +250,6 @@ class HearApp {
             this.showConsole();
             this.titleClickCount = 0;
         }
-        
-        if (this.titleClickCount === 1) {
-            setTimeout(() => {
-                if (this.titleClickCount < 5) {
-                    this.showSetupScreen();
-                }
-            }, 500);
-        }
     }
     
     showSetupScreen() {
@@ -244,12 +258,217 @@ class HearApp {
     }
     
     backToTitle() {
+        // すべての画面を非表示
         document.getElementById('setupScreen').style.display = 'none';
+        document.getElementById('hostScreen').style.display = 'none';
+        document.getElementById('clientScreen').style.display = 'none';
+        document.getElementById('controlScreen').style.display = 'none';
+        document.getElementById('receiverScreen').style.display = 'none';
+        
+        // タイトル画面を表示
         document.getElementById('titleScreen').style.display = 'block';
+        
+        // 状態をリセット
         this.deviceType = null;
         document.querySelectorAll('.device-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById('remotePeerIdInput').value = '';
+        
+        // P2P接続をクリーンアップ
+        if (this.connection) {
+            this.connection.close();
+            this.connection = null;
+        }
+        
+        // QRコードをクリーンアップ
+        this.cleanupQR();
+        
         this.consoleLog('Returned to title screen');
+    }
+    
+    selectHostDevice() {
+        this.deviceType = 'host';
+        document.getElementById('titleScreen').style.display = 'none';
+        document.getElementById('hostScreen').style.display = 'block';
+        
+        // PeerJS初期化（ホストとして）
+        this.initializePeerAsHost();
+        this.consoleLog('Selected as host device');
+    }
+    
+    selectClientDevice() {
+        this.deviceType = 'client';
+        document.getElementById('titleScreen').style.display = 'none';
+        document.getElementById('clientScreen').style.display = 'block';
+        this.consoleLog('Selected as client device');
+    }
+    
+    initializePeerAsHost() {
+        if (this.peer) {
+            this.peer.destroy();
+        }
+        
+        this.peer = new Peer(undefined, {
+            host: '0.peerjs.com',
+            port: 443,
+            path: '/',
+            secure: true,
+            debug: 2,
+            config: {
+                'iceServers': [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            }
+        });
+        
+        this.peer.on('open', (id) => {
+            document.getElementById('hostPeerIdDisplay').textContent = id;
+            this.consoleLog(`Host peer ID: ${id}`);
+        });
+        
+        this.peer.on('connection', (conn) => {
+            this.connection = conn;
+            this.setupConnection();
+            document.getElementById('connectionStatus').textContent = '受信デバイスが接続しました！';
+            this.consoleLog('Client connected to host');
+            
+            // 操作画面に移行
+            setTimeout(() => {
+                document.getElementById('hostScreen').style.display = 'none';
+                document.getElementById('controlScreen').style.display = 'block';
+            }, 2000);
+        });
+        
+        this.peer.on('error', (error) => {
+            console.error('Host peer error:', error);
+            this.consoleLog(`Host peer error: ${error.message}`);
+        });
+    }
+    
+    generateQRCode() {
+        const peerId = document.getElementById('hostPeerIdDisplay').textContent;
+        if (peerId === '接続中...' || !peerId) {
+            alert('ピアIDの生成を待ってください');
+            return;
+        }
+        
+        const qrContainer = document.getElementById('qrcode');
+        qrContainer.innerHTML = ''; // 既存のQRコードをクリア
+        
+        try {
+            // QRCode.jsライブラリを使用
+            if (typeof QRCode !== 'undefined') {
+                this.qrCodeInstance = new QRCode(qrContainer, {
+                    text: peerId,
+                    width: 200,
+                    height: 200,
+                    colorDark: '#ff0000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+                this.consoleLog('QR code generated');
+            } else {
+                throw new Error('QRCode library not loaded');
+            }
+        } catch (error) {
+            console.error('QR generation error:', error);
+            qrContainer.innerHTML = '<p style="color: #ff0000;">QRコード生成エラー</p>';
+        }
+    }
+    
+    startQRScanner() {
+        const qrReaderDiv = document.getElementById('qr-reader');
+        
+        try {
+            if (typeof Html5QrcodeScanner !== 'undefined') {
+                this.html5QrcodeScanner = new Html5QrcodeScanner(
+                    'qr-reader',
+                    { fps: 10, qrbox: 250 },
+                    false
+                );
+                
+                this.html5QrcodeScanner.render(
+                    (decodedText, decodedResult) => {
+                        // QRコード読み取り成功
+                        document.getElementById('clientPeerIdInput').value = decodedText;
+                        this.html5QrcodeScanner.clear();
+                        this.connectToHost();
+                        this.consoleLog(`QR code scanned: ${decodedText}`);
+                    },
+                    (error) => {
+                        // エラーは無視（通常のスキャン中のエラー）
+                    }
+                );
+            } else {
+                throw new Error('Html5QrcodeScanner library not loaded');
+            }
+        } catch (error) {
+            console.error('QR scanner error:', error);
+            qrReaderDiv.innerHTML = '<p style="color: #ff0000;">QRスキャナー初期化エラー</p>';
+        }
+    }
+    
+    connectToHost() {
+        const hostPeerId = document.getElementById('clientPeerIdInput').value.trim();
+        
+        if (!hostPeerId) {
+            alert('ピアIDを入力してください');
+            return;
+        }
+        
+        // P2P接続を開始
+        if (this.peer) {
+            this.peer.destroy();
+        }
+        
+        this.peer = new Peer(undefined, {
+            host: '0.peerjs.com',
+            port: 443,
+            path: '/',
+            secure: true,
+            debug: 2,
+            config: {
+                'iceServers': [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            }
+        });
+        
+        this.peer.on('open', (id) => {
+            this.connection = this.peer.connect(hostPeerId);
+            this.setupConnection();
+            this.consoleLog(`Connecting to host: ${hostPeerId}`);
+            
+            this.connection.on('open', () => {
+                document.getElementById('clientScreen').style.display = 'none';
+                document.getElementById('receiverScreen').style.display = 'block';
+                this.consoleLog('Connected to host successfully');
+            });
+        });
+        
+        this.peer.on('error', (error) => {
+            console.error('Client peer error:', error);
+            alert('接続に失敗しました: ' + error.message);
+            this.consoleLog(`Client peer error: ${error.message}`);
+        });
+    }
+    
+    cleanupQR() {
+        // QRコードインスタンスをクリーンアップ
+        if (this.qrCodeInstance) {
+            const qrContainer = document.getElementById('qrcode');
+            if (qrContainer) {
+                qrContainer.innerHTML = '';
+            }
+            this.qrCodeInstance = null;
+        }
+        
+        // QRスキャナーをクリーンアップ
+        if (this.html5QrcodeScanner) {
+            this.html5QrcodeScanner.clear();
+            this.html5QrcodeScanner = null;
+        }
     }
     
     selectDevice(type) {

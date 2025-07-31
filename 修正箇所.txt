@@ -1,0 +1,25 @@
+【修正箇所】（このファイルはgithubにアップロードしないこと）
+・コンソールの非表示がうまくいかないため確認して修正すること。
+・以下のようなコンソールが表示されてpeerjsが正しく機能していません。内容を読み取り修正を行ってください。
+
+app.js:45 Service Worker registration failed: TypeError: Failed to register a ServiceWorker for scope ('https://kumonochi.github.io/') with script ('https://kumonochi.github.io/sw.js'): A bad HTTP response code (404) was received when fetching the script.
+registerServiceWorker @ app.js:45
+Hear/icon.png:1  Failed to load resource: the server responded with a status of 404 ()
+Hear/icon-192.png:1  Failed to load resource: the server responded with a status of 404 ()
+Hear/:1 Error while trying to use the following icon from the Manifest: https://kumonochi.github.io/Hear/icon-192.png (Download error or resource isn't a valid image)
+Hear/:1 Access to fetch at 'https://peerjs-server.herokuapp.com/peerjs/id?ts=17539719023330.8286664295300978&version=1.4.7' from origin 'https://kumonochi.github.io' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+peerjs-server.herokuapp.com/peerjs/id?ts=17539719023330.8286664295300978&version=1.4.7:1  Failed to load resource: net::ERR_FAILED
+logger.ts:64 ERROR PeerJS:  Error retrieving ID (TypeError) Failed to fetch
+et._print @ logger.ts:64
+logger.ts:64 ERROR PeerJS:  Aborting!
+et._print @ logger.ts:64
+logger.ts:64 ERROR PeerJS:  Error: (Error) Could not get an ID from the server. If you passed in a `path` to your self-hosted PeerServer, you'll also need to pass in that same path when creating a new Peer.
+et._print @ logger.ts:64
+app.js:131 Peer error: Error: Could not get an ID from the server. If you passed in a `path` to your self-hosted PeerServer, you'll also need to pass in that same path when creating a new Peer.
+    at e.<anonymous> (api.ts:46:10)
+    at s (peerjs.min.js:1:133635)
+    at Object.throw (peerjs.min.js:1:132938)
+    at s (peerjs.min.js:1:132708)
+(anonymous) @ app.js:131
+
+・修正を終えたらバージョンを0.0.1上げてgithubにプッシュすること（masterにアップ）

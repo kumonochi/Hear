@@ -27,7 +27,7 @@ class HearApp {
     async registerServiceWorker() {
         if ('serviceWorker' in navigator) {
             try {
-                const registration = await navigator.serviceWorker.register('/sw.js');
+                const registration = await navigator.serviceWorker.register('./sw.js');
                 console.log('Service Worker registered:', registration);
                 
                 registration.addEventListener('updatefound', () => {
@@ -109,9 +109,6 @@ class HearApp {
     
     initializePeer() {
         this.peer = new Peer({
-            host: 'peerjs-server.herokuapp.com',
-            port: 443,
-            secure: true,
             debug: 2
         });
         
@@ -654,7 +651,7 @@ class HearApp {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    new HearApp();
+    window.hearApp = new HearApp();
 });
 
 function toggleConsole() {
@@ -662,9 +659,3 @@ function toggleConsole() {
         window.hearApp.toggleConsole();
     }
 }
-
-window.addEventListener('load', () => {
-    if (window.hearApp) {
-        window.hearApp = hearApp;
-    }
-});

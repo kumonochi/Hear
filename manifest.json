@@ -2,7 +2,7 @@
   "name": "Hear - Horror Call App",
   "short_name": "Hear",
   "description": "疑似的な着信を鳴らし、電話にでるとホラー演出になるアプリ",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#1a1a1a",
   "theme_color": "#ff0000",
@@ -21,6 +21,6 @@
   ],
   "categories": ["entertainment", "games"],
   "lang": "ja",
-  "scope": "/",
+  "scope": "./",
   "prefer_related_applications": false
 }

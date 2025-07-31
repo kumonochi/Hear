@@ -57,6 +57,7 @@ class HearApp {
         const acceptBtn = document.getElementById('acceptBtn');
         const declineBtn = document.getElementById('declineBtn');
         const callHorrorBtn = document.getElementById('callHorrorBtn');
+        const pseudoCallBtn = document.getElementById('pseudoCallBtn');
         const callRealBtn = document.getElementById('callRealBtn');
         const changeRingtoneBtn = document.getElementById('changeRingtoneBtn');
         const changeVibrationBtn = document.getElementById('changeVibrationBtn');
@@ -73,6 +74,7 @@ class HearApp {
         const connectToHostBtn = document.getElementById('connectToHostBtn');
         const hostBackBtn = document.getElementById('hostBackBtn');
         const clientBackBtn = document.getElementById('clientBackBtn');
+        const endCallBtn = document.getElementById('endCallBtn');
         
         // QR関連の変数
         this.qrCodeInstance = null;
@@ -86,7 +88,8 @@ class HearApp {
         receiverDisconnectBtn.addEventListener('click', () => this.disconnect());
         acceptBtn.addEventListener('click', () => this.acceptCall());
         declineBtn.addEventListener('click', () => this.declineCall());
-        callHorrorBtn.addEventListener('click', () => this.initiateHorrorCall());
+        callHorrorBtn.addEventListener('click', () => this.initiateDirectCall());
+        pseudoCallBtn.addEventListener('click', () => this.initiatePseudoCall());
         callRealBtn.addEventListener('click', () => this.initiateRealCall());
         changeRingtoneBtn.addEventListener('click', () => this.changeRingtone());
         changeVibrationBtn.addEventListener('click', () => this.changeVibration());
@@ -102,6 +105,7 @@ class HearApp {
         connectToHostBtn.addEventListener('click', () => this.connectToHost());
         hostBackBtn.addEventListener('click', () => this.backToTitle());
         clientBackBtn.addEventListener('click', () => this.backToTitle());
+        endCallBtn.addEventListener('click', () => this.endCall());
         
         consoleInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -411,14 +415,18 @@ class HearApp {
             canvas.height = 200;
             const ctx = canvas.getContext('2d');
             
-            // 背景（白）
+            // 背景（白） - より大きな白い余白
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 200, 200);
+            
+            // 追加の白い枠
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, 200, 200);
             
             // QRコード風パターンを生成
             ctx.fillStyle = '#000000';
-            const cellSize = 8;
-            const margin = 20;
+            const cellSize = 6;
+            const margin = 30;
             const gridSize = Math.floor((200 - margin * 2) / cellSize);
             
             // データをハッシュ化してパターンを決定
@@ -442,9 +450,13 @@ class HearApp {
             
             container.appendChild(canvas);
             
+            // QRコードにさらなる白い境界線を追加
+            canvas.style.border = '10px solid white';
+            canvas.style.borderRadius = '10px';
+            
             // ピアIDも表示
             const textDiv = document.createElement('div');
-            textDiv.style.cssText = 'margin-top: 10px; font-family: monospace; font-size: 10px; word-break: break-all; color: black; background: rgba(255,255,255,0.9); padding: 5px; border-radius: 5px;';
+            textDiv.style.cssText = 'margin-top: 10px; font-family: monospace; font-size: 10px; word-break: break-all; color: black; background: rgba(255,255,255,0.95); padding: 8px; border-radius: 8px; border: 2px solid white;';
             textDiv.textContent = text;
             container.appendChild(textDiv);
             
@@ -767,8 +779,11 @@ class HearApp {
         this.consoleLog(`Received data: ${JSON.stringify(data)}`);
         
         switch (data.type) {
-            case 'horror_call':
+            case 'direct_call':
                 this.showIncomingCall(data.callerName || this.callerName);
+                break;
+            case 'pseudo_call':
+                this.showIncomingCall(data.callerName || this.callerName, false, true);
                 break;
             case 'real_call':
                 this.showIncomingCall(data.callerName || this.callerName, true);
@@ -776,14 +791,21 @@ class HearApp {
             case 'end_call':
                 this.endCall();
                 break;
+            case 'call_accepted':
+                this.handleCallAccepted(data);
+                break;
+            case 'call_ended':
+                this.handleCallEnded();
+                break;
             case 'settings_update':
                 this.updateSettings(data.settings);
                 break;
         }
     }
     
-    showIncomingCall(callerName, isRealCall = false) {
-        document.getElementById('callerName').textContent = this.garbleText(callerName);
+    showIncomingCall(callerName, isRealCall = false, isPseudoCall = false) {
+        const callerNameElement = document.getElementById('callerName');
+        callerNameElement.textContent = this.garbleText(callerName);
         document.getElementById('callerNumber').textContent = this.generatePhoneNumber();
         document.getElementById('incomingCall').style.display = 'flex';
         
@@ -794,7 +816,31 @@ class HearApp {
             document.getElementById('incomingCall').dataset.realCall = 'true';
         }
         
-        this.consoleLog(`Incoming call from: ${callerName}`);
+        if (isPseudoCall) {
+            document.getElementById('incomingCall').dataset.pseudoCall = 'true';
+            // 着信者名をリアルタイムで文字化けさせる
+            this.startNameGarbling(callerNameElement, callerName);
+        }
+        
+        this.consoleLog(`Incoming call from: ${callerName} (real: ${isRealCall}, pseudo: ${isPseudoCall})`);
+    }
+    
+    startNameGarbling(element, originalName) {
+        // 既存のアニメーションをクリア
+        if (this.nameGarblingInterval) {
+            clearInterval(this.nameGarblingInterval);
+        }
+        
+        this.nameGarblingInterval = setInterval(() => {
+            element.textContent = this.garbleText(originalName);
+        }, 100); // 100msごとに文字化け更新
+    }
+    
+    stopNameGarbling() {
+        if (this.nameGarblingInterval) {
+            clearInterval(this.nameGarblingInterval);
+            this.nameGarblingInterval = null;
+        }
     }
     
     garbleText(text) {
@@ -859,23 +905,51 @@ class HearApp {
     acceptCall() {
         this.stopRingtone();
         this.stopVibration();
+        this.stopNameGarbling();
         
-        const isRealCall = document.getElementById('incomingCall').dataset.realCall === 'true';
+        const incomingCallElement = document.getElementById('incomingCall');
+        const isRealCall = incomingCallElement.dataset.realCall === 'true';
+        const isPseudoCall = incomingCallElement.dataset.pseudoCall === 'true';
+        
+        // 操作デバイスに通話受理を通知
+        if (this.connection) {
+            this.connection.send({
+                type: 'call_accepted',
+                callType: isPseudoCall ? 'pseudo' : (isRealCall ? 'real' : 'direct')
+            });
+        }
         
         if (isRealCall) {
             this.startRealCall();
+            this.showReceiverCallScreen();
+        } else if (isPseudoCall) {
+            this.playPseudoCallAudio();
+            this.showReceiverCallScreen();
         } else {
             this.playHorrorAudio();
+            this.showReceiverCallScreen();
         }
         
-        document.getElementById('incomingCall').style.display = 'none';
+        incomingCallElement.style.display = 'none';
+        // データセットをクリア
+        delete incomingCallElement.dataset.realCall;
+        delete incomingCallElement.dataset.pseudoCall;
+        
         this.consoleLog('Call accepted');
     }
     
     declineCall() {
         this.stopRingtone();
         this.stopVibration();
-        document.getElementById('incomingCall').style.display = 'none';
+        this.stopNameGarbling();
+        
+        const incomingCallElement = document.getElementById('incomingCall');
+        incomingCallElement.style.display = 'none';
+        
+        // データセットをクリア
+        delete incomingCallElement.dataset.realCall;
+        delete incomingCallElement.dataset.pseudoCall;
+        
         this.consoleLog('Call declined');
     }
     
@@ -892,6 +966,54 @@ class HearApp {
         }, 30000);
         
         this.consoleLog('Playing horror audio');
+    }
+    
+    playPseudoCallAudio() {
+        if (!this.audioContext || !this.horrorAudio) return;
+        
+        const source = this.audioContext.createBufferSource();
+        source.buffer = this.horrorAudio;
+        source.connect(this.audioContext.destination);
+        source.start();
+        
+        // 30秒間再生
+        setTimeout(() => {
+            source.stop();
+        }, 30000);
+        
+        this.consoleLog('Playing pseudo call horror audio for 30 seconds');
+    }
+    
+    showReceiverCallScreen() {
+        document.getElementById('receiverScreen').style.display = 'none';
+        document.getElementById('receiverCallScreen').style.display = 'block';
+        this.consoleLog('Receiver call screen shown');
+    }
+    
+    showControllerCallScreen() {
+        document.getElementById('controlScreen').style.display = 'none';
+        document.getElementById('controllerCallScreen').style.display = 'block';
+        this.consoleLog('Controller call screen shown');
+    }
+    
+    handleCallAccepted(data) {
+        this.showControllerCallScreen();
+        this.consoleLog(`Call accepted by receiver - type: ${data.callType}`);
+    }
+    
+    handleCallEnded() {
+        // 通話中画面を隠す
+        document.getElementById('receiverCallScreen').style.display = 'none';
+        document.getElementById('controllerCallScreen').style.display = 'none';
+        
+        // 元の画面に戻る
+        if (this.deviceType === 'client') {
+            document.getElementById('receiverScreen').style.display = 'block';
+        } else {
+            document.getElementById('controlScreen').style.display = 'block';
+        }
+        
+        this.consoleLog('Call ended, returned to previous screen');
     }
     
     async startRealCall() {
@@ -994,15 +1116,26 @@ class HearApp {
         return convolver;
     }
     
-    initiateHorrorCall() {
+    initiateDirectCall() {
         if (!this.connection) return;
         
         this.connection.send({
-            type: 'horror_call',
+            type: 'direct_call',
             callerName: this.callerName
         });
         
-        this.consoleLog('Horror call initiated');
+        this.consoleLog('Direct call initiated');
+    }
+    
+    initiatePseudoCall() {
+        if (!this.connection) return;
+        
+        this.connection.send({
+            type: 'pseudo_call',
+            callerName: this.callerName
+        });
+        
+        this.consoleLog('Pseudo call initiated');
     }
     
     initiateRealCall() {
@@ -1065,7 +1198,22 @@ class HearApp {
     endCall() {
         this.stopRingtone();
         this.stopVibration();
+        this.stopNameGarbling();
+        
+        // 通話終了を相手に通知
+        if (this.connection) {
+            this.connection.send({
+                type: 'call_ended'
+            });
+        }
+        
+        // 着信画面を隠す
         document.getElementById('incomingCall').style.display = 'none';
+        
+        // 通話画面を処理
+        this.handleCallEnded();
+        
+        this.consoleLog('Call ended');
     }
     
     showConsole() {

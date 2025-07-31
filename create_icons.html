@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Icons</title>
+</head>
+<body>
+    <canvas id="canvas192" width="192" height="192" style="border: 1px solid black;"></canvas>
+    <canvas id="canvas512" width="512" height="512" style="border: 1px solid black;"></canvas>
+    
+    <script>
+        function createIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Background
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Create diagonal red squares pattern
+            const squareSize = size / 6;
+            const numSquares = 4;
+            
+            ctx.fillStyle = '#ff0000';
+            
+            // First diagonal line (top-left to bottom-right)
+            for (let i = 0; i < numSquares; i++) {
+                const x = (size / 8) + (i * squareSize * 1.2);
+                const y = (size / 8) + (i * squareSize * 1.2);
+                
+                if (x + squareSize <= size && y + squareSize <= size) {
+                    ctx.save();
+                    ctx.translate(x + squareSize/2, y + squareSize/2);
+                    ctx.rotate(Math.PI / 4); // 45 degree rotation
+                    ctx.fillRect(-squareSize/2, -squareSize/2, squareSize, squareSize);
+                    ctx.restore();
+                }
+            }
+            
+            // Second diagonal line (offset)
+            ctx.fillStyle = '#cc0000'; // Slightly darker red
+            for (let i = 0; i < numSquares - 1; i++) {
+                const x = (size / 4) + (i * squareSize * 1.2);
+                const y = (size / 4) + (i * squareSize * 1.2);
+                
+                if (x + squareSize <= size && y + squareSize <= size) {
+                    ctx.save();
+                    ctx.translate(x + squareSize/2, y + squareSize/2);
+                    ctx.rotate(Math.PI / 4); // 45 degree rotation
+                    ctx.fillRect(-squareSize/2, -squareSize/2, squareSize * 0.8, squareSize * 0.8);
+                    ctx.restore();
+                }
+            }
+            
+            // Third diagonal line (another offset)
+            ctx.fillStyle = '#ff4444'; // Lighter red
+            for (let i = 0; i < numSquares - 2; i++) {
+                const x = (size / 3) + (i * squareSize * 1.2);
+                const y = (size / 6) + (i * squareSize * 1.2);
+                
+                if (x + squareSize <= size && y + squareSize <= size) {
+                    ctx.save();
+                    ctx.translate(x + squareSize/2, y + squareSize/2);
+                    ctx.rotate(Math.PI / 4); // 45 degree rotation
+                    ctx.fillRect(-squareSize/2, -squareSize/2, squareSize * 0.6, squareSize * 0.6);
+                    ctx.restore();
+                }
+            }
+            
+            // Add some horror effect - subtle noise
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+            for (let i = 0; i < 50; i++) {
+                const x = Math.random() * size;
+                const y = Math.random() * size;
+                const dotSize = Math.random() * 3 + 1;
+                ctx.fillRect(x, y, dotSize, dotSize);
+            }
+            
+            return canvas.toDataURL();
+        }
+        
+        // Create both icons
+        const icon192 = createIcon('canvas192', 192);
+        const icon512 = createIcon('canvas512', 512);
+        
+        // Download links
+        function downloadIcon(dataUrl, filename) {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = dataUrl;
+            link.click();
+        }
+        
+        // Add download buttons
+        document.body.innerHTML += '<br><button onclick="downloadIcon(\'' + icon192 + '\', \'icon-192.png\')">Download 192px Icon</button>';
+        document.body.innerHTML += '<button onclick="downloadIcon(\'' + icon512 + '\', \'icon-512.png\')">Download 512px Icon</button>';
+    </script>
+</body>
+</html>

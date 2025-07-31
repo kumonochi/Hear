@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hear</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <link rel="icon" href="icon.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            padding: 20px;
+        }
+        
+        .title-screen {
+            text-align: center;
+        }
+        
+        .title {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000;
+            margin-bottom: 30px;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .setup-screen {
+            display: none;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .input-group {
+            margin: 20px 0;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            text-align: center;
+        }
+        
+        .input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .device-select {
+            display: flex;
+            gap: 15px;
+            margin: 30px 0;
+        }
+        
+        .device-btn {
+            flex: 1;
+            padding: 20px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .device-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .device-btn.active {
+            background: #ff0000;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+        
+        .connect-btn {
+            width: 100%;
+            padding: 20px;
+            font-size: 1.3rem;
+            border: none;
+            border-radius: 15px;
+            background: #ff0000;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+        
+        .connect-btn:hover {
+            background: #cc0000;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.7);
+        }
+        
+        .incoming-call {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ff0000;
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            animation: flashRed 0.5s infinite alternate;
+        }
+        
+        @keyframes flashRed {
+            0% { background: #ff0000; }
+            100% { background: #cc0000; }
+        }
+        
+        .caller-info {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        
+        .caller-name {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            font-family: monospace;
+        }
+        
+        .caller-number {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+        
+        .call-actions {
+            display: flex;
+            gap: 80px;
+        }
+        
+        .call-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .accept-btn {
+            background: #00ff00;
+            color: white;
+        }
+        
+        .decline-btn {
+            background: #ffffff;
+            color: #ff0000;
+        }
+        
+        .control-screen {
+            display: none;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .control-btn {
+            width: 100%;
+            padding: 20px;
+            margin: 15px 0;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .control-btn.main {
+            background: #ff0000;
+            font-size: 1.4rem;
+            padding: 25px;
+        }
+        
+        .control-btn.main:hover {
+            background: #cc0000;
+        }
+        
+        .disconnect-btn {
+            background: #666;
+            margin-top: 30px;
+        }
+        
+        .back-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 30px;
+            font-size: 0.9rem;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .console {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #00ff00;
+            font-family: monospace;
+            display: none;
+            flex-direction: column;
+            z-index: 999;
+        }
+        
+        .console-header {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .console-output {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+        }
+        
+        .console-input {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            color: #00ff00;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- タイトル画面 -->
+        <div id="titleScreen" class="title-screen">
+            <h1 class="title" id="titleText">Hear</h1>
+            <p style="font-size: 1.2rem; opacity: 0.7;">タップして開始</p>
+            <p style="font-size: 0.8rem; opacity: 0.4; margin-top: 20px;">v0.0.1</p>
+        </div>
+        
+        <!-- セットアップ画面 -->
+        <div id="setupScreen" class="setup-screen">
+            <h2 style="margin-bottom: 30px;">デバイス設定</h2>
+            
+            <div class="input-group">
+                <label for="peerIdInput">ピアID（自分）</label>
+                <input type="text" id="peerIdInput" placeholder="自動生成されます">
+            </div>
+            
+            <div class="input-group">
+                <label for="remotePeerIdInput">接続先ピアID</label>
+                <input type="text" id="remotePeerIdInput" placeholder="相手のピアIDを入力">
+            </div>
+            
+            <div class="device-select">
+                <button class="device-btn" id="receiverBtn">受信デバイス</button>
+                <button class="device-btn" id="controllerBtn">操作デバイス</button>
+            </div>
+            
+            <button class="connect-btn" id="connectBtn">接続開始</button>
+            
+            <button class="back-btn" id="setupBackBtn">← タイトルに戻る</button>
+        </div>
+        
+        <!-- 操作画面 -->
+        <div id="controlScreen" class="control-screen">
+            <h2 style="margin-bottom: 30px;">操作パネル</h2>
+            
+            <button class="control-btn main" id="callHorrorBtn">架電する（演出）</button>
+            <button class="control-btn main" id="callRealBtn">架電する（本物）</button>
+            
+            <button class="control-btn" id="changeRingtoneBtn">着信音を変更</button>
+            <button class="control-btn" id="changeVibrationBtn">バイブレーションを変更</button>
+            <button class="control-btn" id="setCallerNameBtn">架電者の名前を設定</button>
+            
+            <button class="control-btn disconnect-btn" id="disconnectBtn">接続を切る</button>
+        </div>
+        
+        <!-- 受信デバイス待機画面 -->
+        <div id="receiverScreen" class="control-screen">
+            <h2 style="margin-bottom: 30px;">受信待機中</h2>
+            <p style="opacity: 0.7; margin-bottom: 30px;">操作デバイスからの指示を待っています</p>
+            <button class="control-btn disconnect-btn" id="receiverDisconnectBtn">接続を切る</button>
+        </div>
+    </div>
+    
+    <!-- 着信画面 -->
+    <div id="incomingCall" class="incoming-call">
+        <div class="caller-info">
+            <div class="caller-name" id="callerName">不明な発信者</div>
+            <div class="caller-number" id="callerNumber">+81-XX-XXXX-XXXX</div>
+        </div>
+        <div class="call-actions">
+            <button class="call-btn decline-btn" id="declineBtn">✕</button>
+            <button class="call-btn accept-btn" id="acceptBtn">📞</button>
+        </div>
+    </div>
+    
+    <!-- コンソール -->
+    <div id="console" class="console">
+        <div class="console-header">
+            <span>Debug Console</span>
+            <button onclick="toggleConsole()" style="background: none; border: none; color: white; cursor: pointer;">×</button>
+        </div>
+        <div class="console-output" id="consoleOutput"></div>
+        <input type="text" class="console-input" id="consoleInput" placeholder="コマンドを入力...">
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>

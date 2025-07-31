@@ -1,16 +1,22 @@
 【修正箇所】（このファイルはgithubにアップロードしないこと）
-・タイトル画面に「受信デバイスにする」「操作デバイスにする」というボタンを作成する。
-・「操作デバイスにする」を押すと、ホスト側としてピアIDを表示する画面に移り、受信デバイスの接続を待つ。
-・「受信デバイスにする」を押すと、ピアIDの入力画面に移動する。
-・「操作デバイスにする」ではピアIDをQRコードにして表示するボタンを作成する。その逆で「受信デバイスにする」ではQRコードを読み取るボタンを作成し、コードを読み込むと自動でピアIDを入力し接続を開始する。以下に公式サイトのBasic Usagesとリポジトリを表示するので参考にすること。またどちらにも戻るボタンを作成しておくこと。
+・タイトルのボタンはホラーらしく怪しく光でぼやけるようにすること。
+・以下のコンソールが表示されてQRコードが表示されない。関数が正しいかなど確認して修正すること。
+sw.js:12 [SW] Installing Service Worker
+sw.js:16 [SW] Caching app shell
+sw.js:26 [SW] Activating Service Worker
+sw.js:32 [SW] Deleting old cache: hear-app-v0.0.3
+html5-qrcode.min.js:1  Failed to load resource: the server responded with a status of 404 ()
+qrcode.min.js:1  Failed to load resource: the server responded with a status of 404 ()
+app.js:31 Service Worker registered: ServiceWorkerRegistration
+app.js:151 Peer ID: 72210d4a-18da-400d-8392-7c303399b421
+app.js:374 QR generation error: Error: QRCode library not loaded
+    at HearApp.generateQRCode (app.js:371:23)
+    at HTMLButtonElement.<anonymous> (app.js:100:60)
+generateQRCode @ app.js:374
+app.js:374 QR generation error: Error: QRCode library not loaded
+    at HearApp.generateQRCode (app.js:371:23)
+    at HTMLButtonElement.<anonymous> (app.js:100:60)
+generateQRCode @ app.js:374
 
-【Basic Usages】
-<div id="qrcode"></div>
-<script type="text/javascript">
-new QRCode(document.getElementById("qrcode"), "http://jindo.dev.naver.com/collie");
-</script>
-
-【リポジトリ】
-https://github.com/davidshimjs/qrcodejs.git
 
 ・修正を終えたらバージョンを0.0.1上げてgithubにプッシュすること（masterにアップ）

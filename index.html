@@ -258,12 +258,53 @@
             cursor: pointer;
             transition: all 0.3s;
             font-weight: bold;
+            position: relative;
+            overflow: hidden;
+            animation: horrorPulse 3s infinite alternate;
         }
         
         .device-select-btn:hover {
             background: rgba(255, 0, 0, 1);
-            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.8), 0 0 60px rgba(255, 0, 0, 0.4);
             transform: translateY(-2px);
+            animation: horrorGlow 1.5s infinite alternate;
+        }
+        
+        .device-select-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: all 0.5s;
+        }
+        
+        .device-select-btn:hover::before {
+            left: 100%;
+        }
+        
+        @keyframes horrorPulse {
+            0% {
+                box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+                filter: blur(0px);
+            }
+            100% {
+                box-shadow: 0 0 25px rgba(255, 0, 0, 0.6), 0 0 50px rgba(255, 0, 0, 0.2);
+                filter: blur(1px);
+            }
+        }
+        
+        @keyframes horrorGlow {
+            0% {
+                box-shadow: 0 0 30px rgba(255, 0, 0, 0.8), 0 0 60px rgba(255, 0, 0, 0.4);
+                filter: blur(1px) saturate(1.5);
+            }
+            100% {
+                box-shadow: 0 0 40px rgba(255, 0, 0, 1), 0 0 80px rgba(255, 0, 0, 0.6), 0 0 120px rgba(255, 0, 0, 0.2);
+                filter: blur(2px) saturate(2);
+            }
         }
         
         .peer-info {
@@ -351,7 +392,7 @@
                 <button class="device-select-btn" id="clientDeviceBtn">受信デバイスにする</button>
             </div>
             
-            <p style="font-size: 0.8rem; opacity: 0.4; margin-top: 20px;">v0.0.4</p>
+            <p style="font-size: 0.8rem; opacity: 0.4; margin-top: 20px;">v0.0.5</p>
         </div>
         
         <!-- セットアップ画面 -->
@@ -460,11 +501,10 @@
     </div>
     
     <!-- QRCode.js ライブラリ -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-    <script src="https://unpkg.com/qrcode-js@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js"></script>
     
     <!-- HTML5 QR Code Scanner -->
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     
     <script src="app.js"></script>
 </body>

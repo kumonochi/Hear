@@ -356,8 +356,9 @@ class HearApp {
         qrContainer.innerHTML = ''; // 既存のQRコードをクリア
         
         try {
-            // QRCode.jsライブラリを使用
+            // ライブラリの読み込み確認
             if (typeof QRCode !== 'undefined') {
+                // QRCode.jsライブラリを使用
                 this.qrCodeInstance = new QRCode(qrContainer, {
                     text: peerId,
                     width: 200,
@@ -366,13 +367,66 @@ class HearApp {
                     colorLight: '#ffffff',
                     correctLevel: QRCode.CorrectLevel.M
                 });
-                this.consoleLog('QR code generated');
+                this.consoleLog('QR code generated successfully');
             } else {
-                throw new Error('QRCode library not loaded');
+                // フォールバック: Canvas APIを使用した簡易QRコード
+                this.generateFallbackQR(qrContainer, peerId);
             }
         } catch (error) {
             console.error('QR generation error:', error);
-            qrContainer.innerHTML = '<p style="color: #ff0000;">QRコード生成エラー</p>';
+            this.consoleLog(`QR generation error: ${error.message}`);
+            // フォールバック処理
+            this.generateFallbackQR(qrContainer, peerId);
+        }
+    }
+    
+    generateFallbackQR(container, text) {
+        try {
+            // Canvas APIを使用した簡易表示
+            const canvas = document.createElement('canvas');
+            canvas.width = 200;
+            canvas.height = 200;
+            const ctx = canvas.getContext('2d');
+            
+            // 背景
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 200, 200);
+            
+            // 赤い枠
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(0, 0, 200, 20);
+            ctx.fillRect(0, 180, 200, 20);
+            ctx.fillRect(0, 0, 20, 200);
+            ctx.fillRect(180, 0, 20, 200);
+            
+            // テキスト表示
+            ctx.fillStyle = '#000000';
+            ctx.font = '12px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('QR Code', 100, 50);
+            ctx.fillText('Peer ID:', 100, 80);
+            
+            // ピアIDを複数行に分割
+            const maxLength = 20;
+            let y = 110;
+            for (let i = 0; i < text.length; i += maxLength) {
+                const line = text.substring(i, i + maxLength);
+                ctx.fillText(line, 100, y);
+                y += 20;
+            }
+            
+            container.appendChild(canvas);
+            this.consoleLog('Fallback QR display created');
+        } catch (fallbackError) {
+            console.error('Fallback QR error:', fallbackError);
+            container.innerHTML = `
+                <div style="background: white; border: 2px solid #ff0000; padding: 20px; border-radius: 10px; color: black; text-align: center;">
+                    <h3 style="color: #ff0000;">ピアID</h3>
+                    <p style="font-family: monospace; word-break: break-all; margin: 10px 0;">${text}</p>
+                    <small>QRコード生成エラー - 手動でピアIDを入力してください</small>
+                </div>
+            `;
+            this.consoleLog('Text-based peer ID display created');
         }
     }
     

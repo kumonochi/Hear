@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hear-app-v0.0.2';
+const CACHE_NAME = 'hear-app-v0.0.3';
 const urlsToCache = [
     './',
     './index.html',
@@ -77,6 +77,15 @@ self.addEventListener('notificationclick', (event) => {
     event.notification.close();
 
     event.waitUntil(
-        clients.openWindow('/')
+        clients.openWindow('./')
     );
+});
+
+// より確実なキャッシュ更新処理
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'CHECK_UPDATE') {
+        event.ports[0].postMessage({
+            hasUpdate: false
+        });
+    }
 });

@@ -93,6 +93,12 @@
         // Add download buttons
         document.body.innerHTML += '<br><button onclick="downloadIcon(\'' + icon192 + '\', \'icon-192.png\')">Download 192px Icon</button>';
         document.body.innerHTML += '<button onclick="downloadIcon(\'' + icon512 + '\', \'icon-512.png\')">Download 512px Icon</button>';
+        
+        // Auto-download (comment out if not needed)
+        setTimeout(() => {
+            downloadIcon(icon192, 'icon-192.png');
+            downloadIcon(icon512, 'icon-512.png');
+        }, 1000);
     </script>
 </body>
 </html>

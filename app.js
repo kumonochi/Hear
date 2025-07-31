@@ -63,6 +63,7 @@ class HearApp {
         const setCallerNameBtn = document.getElementById('setCallerNameBtn');
         const setupBackBtn = document.getElementById('setupBackBtn');
         const consoleInput = document.getElementById('consoleInput');
+        const consoleCloseBtn = document.getElementById('consoleCloseBtn');
         
         titleText.addEventListener('click', () => this.handleTitleClick());
         connectBtn.addEventListener('click', () => this.connectToPeer());
@@ -78,6 +79,7 @@ class HearApp {
         changeVibrationBtn.addEventListener('click', () => this.changeVibration());
         setCallerNameBtn.addEventListener('click', () => this.setCallerName());
         setupBackBtn.addEventListener('click', () => this.backToTitle());
+        consoleCloseBtn.addEventListener('click', () => this.toggleConsole());
         
         consoleInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -108,8 +110,19 @@ class HearApp {
     }
     
     initializePeer() {
-        this.peer = new Peer({
-            debug: 2
+        // PeerJSの公式サーバーを使用
+        this.peer = new Peer(undefined, {
+            host: '0.peerjs.com',
+            port: 443,
+            path: '/',
+            secure: true,
+            debug: 2,
+            config: {
+                'iceServers': [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            }
         });
         
         this.peer.on('open', (id) => {
@@ -621,13 +634,15 @@ class HearApp {
     }
     
     toggleConsole() {
-        const console = document.getElementById('console');
+        const consoleElement = document.getElementById('console');
         if (this.isConsoleVisible) {
-            console.style.display = 'none';
+            consoleElement.style.display = 'none';
             this.isConsoleVisible = false;
+            this.consoleLog('Debug console hidden');
         } else {
-            console.style.display = 'flex';
+            consoleElement.style.display = 'flex';
             this.isConsoleVisible = true;
+            this.consoleLog('Debug console shown');
         }
     }
     

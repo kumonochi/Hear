@@ -487,7 +487,7 @@
                 <button class="device-select-btn" id="clientDeviceBtn">受信デバイスにする</button>
             </div>
             
-            <p style="font-size: 0.8rem; opacity: 0.4; margin-top: 20px;">v0.1.4</p>
+            <p style="font-size: 0.8rem; opacity: 0.4; margin-top: 20px;">v0.1.5</p>
         </div>
         
         <!-- セットアップ画面 -->
@@ -517,6 +517,11 @@
         <!-- 操作画面 -->
         <div id="controlScreen" class="control-screen">
             <h2 style="margin-bottom: 30px;">操作パネル</h2>
+            
+            <!-- 状態表示 -->
+            <div id="callStatus" style="display: none; margin-bottom: 20px; padding: 15px; background: rgba(255, 255, 255, 0.1); border-radius: 10px;">
+                <p id="callStatusText" style="margin: 0; font-size: 1.1rem; color: #ffff00;">待機中</p>
+            </div>
             
             <button class="control-btn main" id="callHorrorBtn">直接架電</button>
             <button class="control-btn main" id="pseudoCallBtn">疑似架電</button>
@@ -562,11 +567,6 @@
             <button class="control-btn disconnect-btn" id="clientBackBtn">タイトルに戻る</button>
         </div>
         
-        <!-- 受信デバイス待機画面 -->
-        <div id="receiverScreen" class="control-screen">
-            <h2 style="margin-bottom: 30px;">受信待機中</h2>
-            <p style="opacity: 0.7; margin-bottom: 30px;">操作デバイスからの指示を待っています</p>
-        </div>
         
         <!-- 受信デバイス通話中画面（真っ赤） -->
         <div id="receiverCallScreen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ff0000; z-index: 1001; justify-content: center; align-items: center; flex-direction: column;">

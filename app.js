@@ -310,7 +310,6 @@ class HearApp {
         document.getElementById('hostScreen').style.display = 'none';
         document.getElementById('clientScreen').style.display = 'none';
         document.getElementById('controlScreen').style.display = 'none';
-        document.getElementById('receiverScreen').style.display = 'none';
         
         // タイトル画面を表示
         document.getElementById('titleScreen').style.display = 'block';
@@ -421,7 +420,11 @@ class HearApp {
                     const hostScreen = document.getElementById('hostScreen');
                     const controlScreen = document.getElementById('controlScreen');
                     if (hostScreen) hostScreen.style.display = 'none';
-                    if (controlScreen) controlScreen.style.display = 'block';
+                    if (controlScreen) {
+                        controlScreen.style.display = 'block';
+                        // 状態表示を有効化
+                        this.updateCallStatus('待機中', '#ffff00');
+                    }
                 }, 2000);
             });
             
@@ -770,7 +773,7 @@ class HearApp {
             
             this.connection.on('open', () => {
                 document.getElementById('clientScreen').style.display = 'none';
-                document.getElementById('receiverScreen').style.display = 'block';
+                // 受信待機中画面は削除されたため、何も表示しない
                 this.consoleLog('Connected to host successfully');
             });
         });
@@ -875,7 +878,7 @@ class HearApp {
         if (this.deviceType === 'controller') {
             document.getElementById('controlScreen').style.display = 'block';
         } else {
-            document.getElementById('receiverScreen').style.display = 'block';
+            // 受信待機中画面は削除されたため、何も表示しない
         }
     }
     
@@ -900,6 +903,21 @@ class HearApp {
                 break;
             case 'call_ended':
                 this.handleCallEnded();
+                break;
+            case 'call_declined':
+                this.updateCallStatus('通話が拒否されました', '#ff0000');
+                setTimeout(() => {
+                    this.updateCallStatus('待機中', '#ffff00');
+                }, 3000);
+                break;
+            case 'ringtone_changed':
+                this.ringtone = data.ringtone;
+                this.createRingtoneAudio();
+                this.consoleLog(`Ringtone updated to: ${data.ringtone}`);
+                break;
+            case 'vibration_changed':
+                this.vibrationPattern = data.vibrationPattern;
+                this.consoleLog(`Vibration pattern updated`);
                 break;
             case 'settings_update':
                 this.updateSettings(data.settings);
@@ -1190,7 +1208,7 @@ class HearApp {
     }
     
     showReceiverCallScreen() {
-        document.getElementById('receiverScreen').style.display = 'none';
+        // receiverScreen画面は削除されたため処理不要
         document.getElementById('receiverCallScreen').style.display = 'block';
         this.consoleLog('Receiver call screen shown');
     }
@@ -1207,14 +1225,16 @@ class HearApp {
     }
     
     handleCallEnded() {
+        // 状態をリセット
+        this.updateCallStatus('待機中', '#ffff00');
+        
         // 通話中画面を隠す
         document.getElementById('receiverCallScreen').style.display = 'none';
         document.getElementById('controllerCallScreen').style.display = 'none';
         
         // 元の画面に戻る
         if (this.deviceType === 'client') {
-            // 受信デバイスの場合は受信待機画面に戻る
-            document.getElementById('receiverScreen').style.display = 'block';
+            // 受信デバイスの場合は何も表示しない（receiverScreen削除済み）
         } else if (this.deviceType === 'host' || this.deviceType === 'controller') {
             // 操作デバイス（ホスト）の場合は操作画面に戻る
             document.getElementById('controlScreen').style.display = 'block';
@@ -1370,6 +1390,17 @@ class HearApp {
         // 新しい着信音を再生成
         this.createRingtoneAudio();
         
+        // 接続先に設定変更を通知
+        if (this.connection && this.connection.open) {
+            this.connection.send({
+                type: 'ringtone_changed',
+                ringtone: this.ringtone
+            });
+        }
+        
+        // 新しい着信音をテスト再生
+        this.testPlayRingtone();
+        
         alert(`着信音を「${ringtoneNames[this.ringtone]}」に変更しました`);
         this.consoleLog(`Ringtone changed to: ${this.ringtone}`);
     }
@@ -1392,6 +1423,14 @@ class HearApp {
         );
         const nextIndex = (currentIndex + 1) % patterns.length;
         this.vibrationPattern = patterns[nextIndex];
+        
+        // 接続先に設定変更を通知
+        if (this.connection && this.connection.open) {
+            this.connection.send({
+                type: 'vibration_changed',
+                vibrationPattern: this.vibrationPattern
+            });
+        }
         
         // 新しいパターンをテスト実行
         if ('vibrate' in navigator) {
@@ -1417,7 +1456,7 @@ class HearApp {
         }
         
         document.getElementById('controlScreen').style.display = 'none';
-        document.getElementById('receiverScreen').style.display = 'none';
+        // receiverScreen画面は削除されたため処理不要
         document.getElementById('titleScreen').style.display = 'block';
         
         this.consoleLog('Disconnected from peer');
@@ -1497,6 +1536,40 @@ class HearApp {
         const timestamp = new Date().toLocaleTimeString();
         output.innerHTML += `<div>[${timestamp}] ${message}</div>`;
         output.scrollTop = output.scrollHeight;
+    }
+    
+    testPlayRingtone() {
+        if (!this.audioContext || !this.ringtoneAudio) return;
+        
+        const source = this.audioContext.createBufferSource();
+        source.buffer = this.ringtoneAudio;
+        source.connect(this.audioContext.destination);
+        source.start();
+        
+        // 2秒で停止
+        setTimeout(() => {
+            if (source) {
+                try {
+                    source.stop();
+                } catch (error) {
+                    console.warn('Test ringtone already stopped:', error);
+                }
+            }
+        }, 2000);
+        
+        this.consoleLog('Test ringtone played');
+    }
+    
+    updateCallStatus(text, color = '#ffff00') {
+        const statusElement = document.getElementById('callStatus');
+        const statusTextElement = document.getElementById('callStatusText');
+        
+        if (statusElement && statusTextElement) {
+            statusElement.style.display = 'block';
+            statusTextElement.textContent = text;
+            statusTextElement.style.color = color;
+            this.consoleLog(`Call status updated: ${text}`);
+        }
     }
     
     executeConsoleCommand(command) {

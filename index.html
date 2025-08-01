@@ -487,7 +487,7 @@
                 <button class="device-select-btn" id="clientDeviceBtn">受信デバイスにする</button>
             </div>
             
-            <p style="font-size: 0.8rem; opacity: 0.4; margin-top: 20px;">v0.1.1</p>
+            <p style="font-size: 0.8rem; opacity: 0.4; margin-top: 20px;">v0.1.2</p>
         </div>
         
         <!-- セットアップ画面 -->
@@ -520,13 +520,9 @@
             
             <button class="control-btn main" id="callHorrorBtn">直接架電</button>
             <button class="control-btn main" id="pseudoCallBtn">疑似架電</button>
-            <button class="control-btn main" id="callRealBtn">架電する（本物）</button>
             
             <button class="control-btn" id="changeRingtoneBtn">着信音を変更</button>
             <button class="control-btn" id="changeVibrationBtn">バイブレーションを変更</button>
-            <button class="control-btn" id="setCallerNameBtn">架電者の名前を設定</button>
-            
-            <button class="control-btn disconnect-btn" id="disconnectBtn">接続を切る</button>
         </div>
         
         <!-- ホスト（操作デバイス）画面 -->
@@ -575,6 +571,12 @@
         
         <!-- 受信デバイス通話中画面（真っ赤） -->
         <div id="receiverCallScreen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ff0000; z-index: 1001; justify-content: center; align-items: center; flex-direction: column;">
+            <!-- 着信者情報表示 -->
+            <div id="receiverCallerInfo" class="caller-info" style="margin-bottom: 80px; text-align: center; color: white;">
+                <div class="caller-name" id="receiverCallerName" style="font-size: 2.5rem; margin-bottom: 15px; font-family: 'Arial', sans-serif; font-weight: 300; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);">不明な発信者</div>
+                <div class="caller-number" id="receiverCallerNumber" style="font-size: 1.4rem; color: #cccccc; font-family: monospace; letter-spacing: 2px;">000-0000-0000</div>
+            </div>
+            
             <!-- 着信時のボタン（初期状態で表示） -->
             <div id="receiverIncomingButtons" class="call-actions" style="display: flex;">
                 <button class="call-btn decline-btn" id="receiverDeclineBtn">✕</button>

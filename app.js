@@ -833,6 +833,23 @@ class HearApp {
     showIncomingCall(callerName, isRealCall = false, isPseudoCall = false) {
         // 受信デバイスの場合は真っ赤な画面を表示
         if (this.deviceType === 'client') {
+            // 着信者情報を設定
+            const receiverCallerNameElement = document.getElementById('receiverCallerName');
+            const receiverCallerNumberElement = document.getElementById('receiverCallerNumber');
+            
+            if (isPseudoCall) {
+                receiverCallerNameElement.textContent = this.garbleText(callerName);
+                // 着信者名をリアルタイムで文字化けさせる
+                this.startNameGarbling(receiverCallerNameElement, callerName);
+            } else {
+                receiverCallerNameElement.textContent = this.garbleText(callerName);
+            }
+            
+            receiverCallerNumberElement.textContent = this.generatePhoneNumber();
+            
+            // 電話番号のリアルタイムアニメーションを開始
+            this.startPhoneNumberAnimation(receiverCallerNumberElement);
+            
             document.getElementById('receiverCallScreen').style.display = 'flex';
             document.getElementById('receiverIncomingButtons').style.display = 'flex';
             this.consoleLog('Receiver device: showing red screen for incoming call');
@@ -909,8 +926,8 @@ class HearApp {
         return number;
     }
     
-    startPhoneNumberAnimation() {
-        const phoneNumberElement = document.getElementById('callerNumber');
+    startPhoneNumberAnimation(targetElement = null) {
+        const phoneNumberElement = targetElement || document.getElementById('callerNumber');
         if (!phoneNumberElement) return;
         
         // 既存のアニメーションを停止

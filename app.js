@@ -934,6 +934,9 @@ class HearApp {
             // バックグラウンド時の画面復帰処理
             this.bringToForeground();
             
+            // 通知を表示（バックグラウンド対応）
+            this.showIncomingCallNotification(callerName);
+            
             // 着信者情報を設定
             const receiverCallerNameElement = document.getElementById('receiverCallerName');
             const receiverCallerNumberElement = document.getElementById('receiverCallerNumber');
@@ -1149,10 +1152,18 @@ class HearApp {
         this.stopPhoneNumberAnimation();
         this.stopAllAudio();
         
-        // 受信デバイスの場合は赤い画面を非表示し、ボタンも再表示
+        // 受信デバイスの場合は拒否通知を操作デバイスに送信
         if (this.deviceType === 'client') {
             document.getElementById('receiverCallScreen').style.display = 'none';
             document.getElementById('receiverIncomingButtons').style.display = 'flex';
+            
+            // 操作デバイスに拒否を通知
+            if (this.connection) {
+                this.connection.send({
+                    type: 'call_declined'
+                });
+            }
+            this.consoleLog('Call declined by receiver device');
         } else {
             // 操作デバイスの場合は着信画面を非表示
             const incomingCallElement = document.getElementById('incomingCall');
@@ -1161,9 +1172,15 @@ class HearApp {
             // データセットをクリア
             delete incomingCallElement.dataset.realCall;
             delete incomingCallElement.dataset.pseudoCall;
+            
+            // 自分で拒否した場合も状態を更新
+            this.updateCallStatus('通話が拒否されました', '#ff0000');
+            setTimeout(() => {
+                this.updateCallStatus('待機中', '#ffff00');
+            }, 3000);
+            
+            this.consoleLog('Call declined by controller device');
         }
-        
-        this.consoleLog('Call declined');
     }
     
     playHorrorAudio() {
@@ -1590,49 +1607,169 @@ class HearApp {
         window.addEventListener('blur', () => {
             this.consoleLog('Window blurred');
         });
+        
+        // 通知許可を要求
+        this.requestNotificationPermission();
+        
+        // Service Workerからのメッセージを処理
+        this.setupServiceWorkerMessageHandler();
+    }
+    
+    async requestNotificationPermission() {
+        if ('Notification' in window) {
+            const permission = await Notification.requestPermission();
+            this.consoleLog(`Notification permission: ${permission}`);
+            return permission === 'granted';
+        }
+        return false;
+    }
+    
+    showIncomingCallNotification(callerName) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            const notification = new Notification('Hear - 着信中', {
+                body: `${callerName}からの着信です`,
+                icon: './icon-192.png',
+                badge: './icon-192.png',
+                tag: 'incoming-call',
+                requireInteraction: true,
+                vibrate: this.vibrationPattern || [200, 100, 200],
+                actions: [
+                    {
+                        action: 'answer',
+                        title: '応答',
+                        icon: './icon-192.png'
+                    },
+                    {
+                        action: 'decline',
+                        title: '拒否',
+                        icon: './icon-192.png'
+                    }
+                ]
+            });
+            
+            notification.onclick = () => {
+                window.focus();
+                this.bringToForeground();
+                notification.close();
+            };
+            
+            // 30秒後に自動で閉じる
+            setTimeout(() => {
+                notification.close();
+            }, 30000);
+            
+            this.consoleLog('Incoming call notification shown');
+        } else {
+            this.consoleLog('Notifications not available or not permitted');
+        }
+    }
+    
+    setupServiceWorkerMessageHandler() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'NOTIFICATION_ANSWER') {
+                    this.consoleLog('Notification answer action received');
+                    this.acceptCall();
+                } else if (event.data && event.data.type === 'NOTIFICATION_DECLINE') {
+                    this.consoleLog('Notification decline action received');
+                    this.declineCall();
+                }
+            });
+        }
     }
     
     bringToForeground() {
         try {
-            // ページをフォーカス
-            if (window.focus) {
-                window.focus();
-            }
+            this.consoleLog('Attempting to bring app to foreground...');
             
-            // Service Workerがある場合は通知も送信
+            // 1. ページをフォーカス（複数回試行）
+            const focusAttempts = () => {
+                if (window.focus) {
+                    window.focus();
+                }
+                // 少し遅延して再度フォーカス
+                setTimeout(() => {
+                    if (window.focus) {
+                        window.focus();
+                    }
+                }, 100);
+            };
+            focusAttempts();
+            
+            // 2. Service Workerを通じてウィンドウを開く
             if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({
                     type: 'FOCUS_WINDOW'
                 });
             }
             
-            // ページの可視性を変更
+            // 3. 可視性変更イベントを強制発火
             if (document.hidden) {
-                // バックグラウンドから復帰時の処理
-                this.consoleLog('Bringing app to foreground for incoming call');
+                this.consoleLog('App is hidden, attempting to show...');
+                
+                // 可視性変更を試行
+                const visibilityEvent = new Event('visibilitychange');
+                document.dispatchEvent(visibilityEvent);
             }
             
-            // Wake Lock APIを試行（対応している場合）
+            // 4. Wake Lock APIでスクリーンを維持
             if ('wakeLock' in navigator) {
                 navigator.wakeLock.request('screen').then(wakeLock => {
                     this.consoleLog('Screen wake lock acquired');
+                    this.currentWakeLock = wakeLock;
+                    
                     // 着信終了時に解放
                     setTimeout(() => {
-                        wakeLock.release().then(() => {
-                            this.consoleLog('Screen wake lock released');
-                        });
-                    }, 30000); // 30秒後に自動解放
+                        if (this.currentWakeLock) {
+                            this.currentWakeLock.release().then(() => {
+                                this.consoleLog('Screen wake lock released');
+                                this.currentWakeLock = null;
+                            });
+                        }
+                    }, 30000);
                 }).catch(err => {
                     console.warn('Could not acquire wake lock:', err);
                 });
             }
             
-            // 画面を最大に表示（フルスクリーン対応）
+            // 5. フルスクリーン表示を試行
             if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
+                document.documentElement.requestFullscreen().then(() => {
+                    this.consoleLog('Entered fullscreen mode');
+                }).catch(err => {
                     console.warn('Could not enter fullscreen:', err);
                 });
             }
+            
+            // 6. 画面の向きをロック（モバイル対応）
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('portrait').catch(err => {
+                    console.warn('Could not lock orientation:', err);
+                });
+            }
+            
+            // 7. ユーザーアクション後のフォーカス処理
+            const userInteractionHandler = () => {
+                focusAttempts();
+                document.removeEventListener('click', userInteractionHandler);
+                document.removeEventListener('touchstart', userInteractionHandler);
+            };
+            document.addEventListener('click', userInteractionHandler);
+            document.addEventListener('touchstart', userInteractionHandler);
+            
+            // 8. タイマーによる継続的なフォーカス試行
+            let focusInterval = setInterval(() => {
+                if (!document.hidden) {
+                    clearInterval(focusInterval);
+                    return;
+                }
+                focusAttempts();
+            }, 500);
+            
+            // 10秒後にインターバルをクリア
+            setTimeout(() => {
+                clearInterval(focusInterval);
+            }, 10000);
             
         } catch (error) {
             console.warn('Could not bring to foreground:', error);

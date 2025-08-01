@@ -91,8 +91,52 @@ self.addEventListener('notificationclick', (event) => {
     event.notification.close();
 
     event.waitUntil(
-        clients.openWindow('./')
+        clients.matchAll({ type: 'window' }).then((clientList) => {
+            // 既存のウィンドウがあればフォーカス
+            for (const client of clientList) {
+                if (client.url.includes('Hear') && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            // なければ新しいウィンドウを開く
+            if (clients.openWindow) {
+                return clients.openWindow('./');
+            }
+        })
     );
+});
+
+// 通知アクション処理
+self.addEventListener('notificationclick', (event) => {
+    console.log('[SW] Notification action:', event.action);
+    
+    if (event.action === 'answer') {
+        // 応答アクション
+        event.waitUntil(
+            clients.matchAll({ type: 'window' }).then((clientList) => {
+                for (const client of clientList) {
+                    if (client.url.includes('Hear')) {
+                        client.postMessage({ type: 'NOTIFICATION_ANSWER' });
+                        return client.focus();
+                    }
+                }
+            })
+        );
+    } else if (event.action === 'decline') {
+        // 拒否アクション
+        event.waitUntil(
+            clients.matchAll({ type: 'window' }).then((clientList) => {
+                for (const client of clientList) {
+                    if (client.url.includes('Hear')) {
+                        client.postMessage({ type: 'NOTIFICATION_DECLINE' });
+                        return client.focus();
+                    }
+                }
+            })
+        );
+    }
+    
+    event.notification.close();
 });
 
 // より確実なキャッシュ更新処理

@@ -377,12 +377,28 @@ class HearApp {
                         colorLight: '#ffffff',
                         correctLevel: QRCode.CorrectLevel.M
                     });
+                    // QRコードコンテナに白いマージンを追加
+                    setTimeout(() => {
+                        const qrImg = qrContainer.querySelector('img');
+                        if (qrImg) {
+                            qrImg.style.border = '19px solid white';
+                            qrImg.style.borderRadius = '10px';
+                        }
+                    }, 100);
                     this.consoleLog('QR code generated with QRCode.js library');
                 } else if (typeof QRCode !== 'undefined') {
                     // シンプルなQRCode使用（設定なし）
                     console.log('Using simple QRCode');
                     this.qrCodeInstance = new QRCode(qrContainer, peerId);
                     this.consoleLog('QR code generated with simple QRCode');
+                    // QRコードコンテナに白いマージンを追加
+                    setTimeout(() => {
+                        const qrImg = qrContainer.querySelector('img');
+                        if (qrImg) {
+                            qrImg.style.border = '19px solid white';
+                            qrImg.style.borderRadius = '10px';
+                        }
+                    }, 100);
                 } else {
                     throw new Error('QRCode library not available');
                 }
@@ -419,14 +435,14 @@ class HearApp {
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, 200, 200);
             
-            // 追加の白い枠
+            // 追加の白い枠（内部マージン）
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, 200, 200);
             
             // QRコード風パターンを生成
             ctx.fillStyle = '#000000';
             const cellSize = 6;
-            const margin = 30;
+            const margin = 35;
             const gridSize = Math.floor((200 - margin * 2) / cellSize);
             
             // データをハッシュ化してパターンを決定
@@ -450,13 +466,13 @@ class HearApp {
             
             container.appendChild(canvas);
             
-            // QRコードにさらなる白い境界線を追加
-            canvas.style.border = '10px solid white';
+            // QRコードにさらなる白い境界線を追加（5mm相当）
+            canvas.style.border = '19px solid white';
             canvas.style.borderRadius = '10px';
             
             // ピアIDも表示
             const textDiv = document.createElement('div');
-            textDiv.style.cssText = 'margin-top: 10px; font-family: monospace; font-size: 10px; word-break: break-all; color: black; background: rgba(255,255,255,0.95); padding: 8px; border-radius: 8px; border: 2px solid white;';
+            textDiv.style.cssText = 'margin-top: 15px; font-family: monospace; font-size: 10px; word-break: break-all; color: black; background: rgba(255,255,255,0.95); padding: 12px; border-radius: 8px; border: 3px solid white;';
             textDiv.textContent = text;
             container.appendChild(textDiv);
             
@@ -509,7 +525,7 @@ class HearApp {
         try {
             // シンプルなテキスト表示（最終フォールバック）
             container.innerHTML = `
-                <div style="background: white; border: 2px solid #000000; padding: 20px; border-radius: 10px; color: black; text-align: center; width: 200px; height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <div style="background: white; border: 2px solid #000000; padding: 20px; border-radius: 10px; color: black; text-align: center; width: 200px; height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 19px; box-shadow: 0 0 0 19px white;">
                     <h3 style="color: #000000; margin: 0 0 10px 0;">ピアID</h3>
                     <p style="font-family: monospace; word-break: break-all; margin: 10px 0; font-size: 12px; line-height: 1.2;">${text}</p>
                     <small style="color: #666;">手動で入力してください</small>

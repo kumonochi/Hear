@@ -55,16 +55,13 @@ class HearApp {
         const connectBtn = document.getElementById('connectBtn');
         const receiverBtn = document.getElementById('receiverBtn');
         const controllerBtn = document.getElementById('controllerBtn');
-        const disconnectBtn = document.getElementById('disconnectBtn');
         const receiverDisconnectBtn = document.getElementById('receiverDisconnectBtn');
         const acceptBtn = document.getElementById('acceptBtn');
         const declineBtn = document.getElementById('declineBtn');
         const callHorrorBtn = document.getElementById('callHorrorBtn');
         const pseudoCallBtn = document.getElementById('pseudoCallBtn');
-        const callRealBtn = document.getElementById('callRealBtn');
         const changeRingtoneBtn = document.getElementById('changeRingtoneBtn');
         const changeVibrationBtn = document.getElementById('changeVibrationBtn');
-        const setCallerNameBtn = document.getElementById('setCallerNameBtn');
         const setupBackBtn = document.getElementById('setupBackBtn');
         const consoleInput = document.getElementById('consoleInput');
         const consoleCloseBtn = document.getElementById('consoleCloseBtn');
@@ -88,25 +85,37 @@ class HearApp {
         this.html5QrcodeScanner = null;
         
         titleText.addEventListener('click', () => this.handleTitleClick());
-        connectBtn.addEventListener('click', () => this.connectToPeer());
-        receiverBtn.addEventListener('click', () => this.selectDevice('receiver'));
-        controllerBtn.addEventListener('click', () => this.selectDevice('controller'));
-        disconnectBtn.addEventListener('click', () => this.disconnect());
-        receiverDisconnectBtn.addEventListener('click', () => this.disconnect());
-        acceptBtn.addEventListener('click', () => this.acceptCall());
-        declineBtn.addEventListener('click', () => this.declineCall());
-        callHorrorBtn.addEventListener('click', () => this.initiateDirectCall());
-        pseudoCallBtn.addEventListener('click', () => this.initiatePseudoCall());
-        callRealBtn.addEventListener('click', () => this.initiateRealCall());
-        changeRingtoneBtn.addEventListener('click', () => this.changeRingtone());
-        changeVibrationBtn.addEventListener('click', () => this.changeVibration());
-        setCallerNameBtn.addEventListener('click', () => this.setCallerName());
-        setupBackBtn.addEventListener('click', () => this.backToTitle());
-        consoleCloseBtn.addEventListener('click', () => this.toggleConsole());
+        if (connectBtn) connectBtn.addEventListener('click', () => this.connectToPeer());
+        if (receiverBtn) receiverBtn.addEventListener('click', () => this.selectDevice('receiver'));
+        if (controllerBtn) controllerBtn.addEventListener('click', () => this.selectDevice('controller'));
+        if (receiverDisconnectBtn) receiverDisconnectBtn.addEventListener('click', () => this.disconnect());
+        if (acceptBtn) acceptBtn.addEventListener('click', () => this.acceptCall());
+        if (declineBtn) declineBtn.addEventListener('click', () => this.declineCall());
+        if (callHorrorBtn) callHorrorBtn.addEventListener('click', () => this.initiateDirectCall());
+        if (pseudoCallBtn) pseudoCallBtn.addEventListener('click', () => this.initiatePseudoCall());
+        if (changeRingtoneBtn) changeRingtoneBtn.addEventListener('click', () => this.changeRingtone());
+        if (changeVibrationBtn) changeVibrationBtn.addEventListener('click', () => this.changeVibration());
+        if (setupBackBtn) setupBackBtn.addEventListener('click', () => this.backToTitle());
+        if (consoleCloseBtn) consoleCloseBtn.addEventListener('click', () => this.toggleConsole());
         
         // 新しいイベントリスナー
-        hostDeviceBtn.addEventListener('click', () => this.selectHostDevice());
-        clientDeviceBtn.addEventListener('click', () => this.selectClientDevice());
+        if (hostDeviceBtn) {
+            hostDeviceBtn.addEventListener('click', () => {
+                console.log('Host device button clicked');
+                this.selectHostDevice();
+            });
+        } else {
+            console.error('hostDeviceBtn not found');
+        }
+        
+        if (clientDeviceBtn) {
+            clientDeviceBtn.addEventListener('click', () => {
+                console.log('Client device button clicked');
+                this.selectClientDevice();
+            });
+        } else {
+            console.error('clientDeviceBtn not found');
+        }
         generateQRBtn.addEventListener('click', () => this.generateQRCode());
         scanQRBtn.addEventListener('click', () => this.startQRScanner());
         connectToHostBtn.addEventListener('click', () => this.connectToHost());
@@ -301,9 +310,17 @@ class HearApp {
     }
     
     selectHostDevice() {
+        console.log('selectHostDevice called');
         this.deviceType = 'host';
-        document.getElementById('titleScreen').style.display = 'none';
-        document.getElementById('hostScreen').style.display = 'block';
+        
+        const titleScreen = document.getElementById('titleScreen');
+        const hostScreen = document.getElementById('hostScreen');
+        
+        console.log('titleScreen:', titleScreen);
+        console.log('hostScreen:', hostScreen);
+        
+        if (titleScreen) titleScreen.style.display = 'none';
+        if (hostScreen) hostScreen.style.display = 'block';
         
         // PeerJS初期化（ホストとして）
         this.initializePeerAsHost();
@@ -311,53 +328,90 @@ class HearApp {
     }
     
     selectClientDevice() {
+        console.log('selectClientDevice called');
         this.deviceType = 'client';
-        document.getElementById('titleScreen').style.display = 'none';
-        document.getElementById('clientScreen').style.display = 'block';
+        
+        const titleScreen = document.getElementById('titleScreen');
+        const clientScreen = document.getElementById('clientScreen');
+        
+        console.log('titleScreen:', titleScreen);
+        console.log('clientScreen:', clientScreen);
+        
+        if (titleScreen) titleScreen.style.display = 'none';
+        if (clientScreen) clientScreen.style.display = 'block';
         this.consoleLog('Selected as client device');
     }
     
     initializePeerAsHost() {
-        if (this.peer) {
-            this.peer.destroy();
-        }
-        
-        this.peer = new Peer(undefined, {
-            host: '0.peerjs.com',
-            port: 443,
-            path: '/',
-            secure: true,
-            debug: 2,
-            config: {
-                'iceServers': [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
-                ]
-            }
-        });
-        
-        this.peer.on('open', (id) => {
-            document.getElementById('hostPeerIdDisplay').textContent = id;
-            this.consoleLog(`Host peer ID: ${id}`);
-        });
-        
-        this.peer.on('connection', (conn) => {
-            this.connection = conn;
-            this.setupConnection();
-            document.getElementById('connectionStatus').textContent = '受信デバイスが接続しました！';
-            this.consoleLog('Client connected to host');
+        try {
+            console.log('Initializing peer as host...');
             
-            // 操作画面に移行
-            setTimeout(() => {
-                document.getElementById('hostScreen').style.display = 'none';
-                document.getElementById('controlScreen').style.display = 'block';
-            }, 2000);
-        });
-        
-        this.peer.on('error', (error) => {
-            console.error('Host peer error:', error);
-            this.consoleLog(`Host peer error: ${error.message}`);
-        });
+            if (this.peer) {
+                this.peer.destroy();
+            }
+            
+            // PeerJSライブラリの確認
+            if (typeof Peer === 'undefined') {
+                console.warn('Peer library not loaded, attempting to load...');
+                this.loadPeerJS().then(() => {
+                    this.initializePeerAsHost();
+                }).catch(error => {
+                    console.error('Failed to load PeerJS:', error);
+                    this.consoleLog('PeerJS loading failed, continuing without P2P');
+                });
+                return;
+            }
+            
+            this.peer = new Peer(undefined, {
+                host: '0.peerjs.com',
+                port: 443,
+                path: '/',
+                secure: true,
+                debug: 2,
+                config: {
+                    'iceServers': [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ]
+                }
+            });
+            
+            this.peer.on('open', (id) => {
+                const hostPeerIdDisplay = document.getElementById('hostPeerIdDisplay');
+                if (hostPeerIdDisplay) {
+                    hostPeerIdDisplay.textContent = id;
+                }
+                this.consoleLog(`Host peer ID: ${id}`);
+            });
+            
+            this.peer.on('connection', (conn) => {
+                this.connection = conn;
+                this.setupConnection();
+                const connectionStatus = document.getElementById('connectionStatus');
+                if (connectionStatus) {
+                    connectionStatus.textContent = '受信デバイスが接続しました！';
+                }
+                this.consoleLog('Client connected to host');
+                
+                // 操作画面に移行
+                setTimeout(() => {
+                    const hostScreen = document.getElementById('hostScreen');
+                    const controlScreen = document.getElementById('controlScreen');
+                    if (hostScreen) hostScreen.style.display = 'none';
+                    if (controlScreen) controlScreen.style.display = 'block';
+                }, 2000);
+            });
+            
+            this.peer.on('error', (error) => {
+                console.error('Host peer error:', error);
+                this.consoleLog(`Host peer error: ${error.message}`);
+            });
+            
+            console.log('Peer initialization completed');
+        } catch (error) {
+            console.error('Error initializing peer as host:', error);
+            this.consoleLog(`Peer initialization error: ${error.message}`);
+        }
     }
     
     generateQRCode() {

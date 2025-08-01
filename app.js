@@ -11,6 +11,9 @@ class HearApp {
         this.audioContext = null;
         this.horrorAudio = null;
         this.ringtoneAudio = null;
+        this.currentHorrorSource = null;
+        this.currentPseudoSource = null;
+        this.phoneNumberInterval = null;
         
         this.init();
     }
@@ -825,6 +828,9 @@ class HearApp {
         document.getElementById('callerNumber').textContent = this.generatePhoneNumber();
         document.getElementById('incomingCall').style.display = 'flex';
         
+        // 電話番号のリアルタイムアニメーションを開始
+        this.startPhoneNumberAnimation();
+        
         this.playRingtone();
         this.vibrate();
         
@@ -860,11 +866,11 @@ class HearApp {
     }
     
     garbleText(text) {
-        const garbledChars = '▓░▒█▄▀■□▲●◆★☆※〒◇◎○△▽';
+        const garbledChars = '縺ゅ↑縺溘?縺薙→繧呈爾縺励※縺?∪縺励◆縲ゅ≠縺ｪ縺溘↓螢ｰ繧貞ｱ翫￠縺溘￥縺ｦ縲√≠縺ｪ縺溘′縺?◆縺九ｉ縲√≠縺ｪ縺溘′謇句?縺ｨ縺｣縺ｦ縺上ｌ縺溘°繧峨?ゅ□縺九ｉ荳?邱偵↓縺?※縲ゅ□縺｣縺ｦ縲∬ｪｭ繧√※縺?ｋ繧薙〒縺励ｇ縺?ｼ';
         let result = '';
         
         for (let i = 0; i < text.length; i++) {
-            if (Math.random() < 0.3) {
+            if (Math.random() < 0.6) {
                 result += garbledChars[Math.floor(Math.random() * garbledChars.length)];
             } else {
                 result += text[i];
@@ -875,8 +881,39 @@ class HearApp {
     }
     
     generatePhoneNumber() {
-        const numbers = ['090', '080', '070'][Math.floor(Math.random() * 3)];
-        return `${numbers}-XXXX-XXXX`;
+        // ランダムな数字を生成
+        let number = '';
+        for (let i = 0; i < 11; i++) {
+            if (i === 3 || i === 7) {
+                number += '-';
+            } else {
+                number += Math.floor(Math.random() * 10);
+            }
+        }
+        return number;
+    }
+    
+    startPhoneNumberAnimation() {
+        const phoneNumberElement = document.getElementById('callerNumber');
+        if (!phoneNumberElement) return;
+        
+        // 既存のアニメーションを停止
+        this.stopPhoneNumberAnimation();
+        
+        // 100msごとに電話番号を更新
+        this.phoneNumberInterval = setInterval(() => {
+            phoneNumberElement.textContent = this.generatePhoneNumber();
+        }, 100);
+        
+        this.consoleLog('Phone number animation started');
+    }
+    
+    stopPhoneNumberAnimation() {
+        if (this.phoneNumberInterval) {
+            clearInterval(this.phoneNumberInterval);
+            this.phoneNumberInterval = null;
+            this.consoleLog('Phone number animation stopped');
+        }
     }
     
     playRingtone() {
@@ -922,6 +959,7 @@ class HearApp {
         this.stopRingtone();
         this.stopVibration();
         this.stopNameGarbling();
+        this.stopPhoneNumberAnimation();
         
         const incomingCallElement = document.getElementById('incomingCall');
         const isRealCall = incomingCallElement.dataset.realCall === 'true';
@@ -958,6 +996,8 @@ class HearApp {
         this.stopRingtone();
         this.stopVibration();
         this.stopNameGarbling();
+        this.stopPhoneNumberAnimation();
+        this.stopAllAudio();
         
         const incomingCallElement = document.getElementById('incomingCall');
         incomingCallElement.style.display = 'none';
@@ -972,13 +1012,21 @@ class HearApp {
     playHorrorAudio() {
         if (!this.audioContext || !this.horrorAudio) return;
         
+        // 既存の音声を停止
+        this.stopAllAudio();
+        
         const source = this.audioContext.createBufferSource();
         source.buffer = this.horrorAudio;
         source.connect(this.audioContext.destination);
         source.start();
         
+        this.currentHorrorSource = source;
+        
         setTimeout(() => {
-            source.stop();
+            if (this.currentHorrorSource === source) {
+                source.stop();
+                this.currentHorrorSource = null;
+            }
         }, 30000);
         
         this.consoleLog('Playing horror audio');
@@ -987,14 +1035,22 @@ class HearApp {
     playPseudoCallAudio() {
         if (!this.audioContext || !this.horrorAudio) return;
         
+        // 既存の音声を停止
+        this.stopAllAudio();
+        
         const source = this.audioContext.createBufferSource();
         source.buffer = this.horrorAudio;
         source.connect(this.audioContext.destination);
         source.start();
         
+        this.currentPseudoSource = source;
+        
         // 30秒間再生
         setTimeout(() => {
-            source.stop();
+            if (this.currentPseudoSource === source) {
+                source.stop();
+                this.currentPseudoSource = null;
+            }
         }, 30000);
         
         this.consoleLog('Playing pseudo call horror audio for 30 seconds');
@@ -1211,10 +1267,39 @@ class HearApp {
         this.consoleLog('Disconnected from peer');
     }
     
+    stopAllAudio() {
+        // 着信音を停止
+        this.stopRingtone();
+        
+        // ホラー音声を停止
+        if (this.currentHorrorSource) {
+            try {
+                this.currentHorrorSource.stop();
+            } catch (error) {
+                console.warn('Horror audio already stopped:', error);
+            }
+            this.currentHorrorSource = null;
+        }
+        
+        // 疑似通話音声を停止
+        if (this.currentPseudoSource) {
+            try {
+                this.currentPseudoSource.stop();
+            } catch (error) {
+                console.warn('Pseudo call audio already stopped:', error);
+            }
+            this.currentPseudoSource = null;
+        }
+        
+        this.consoleLog('All audio stopped');
+    }
+    
     endCall() {
         this.stopRingtone();
         this.stopVibration();
         this.stopNameGarbling();
+        this.stopPhoneNumberAnimation();
+        this.stopAllAudio();
         
         // 通話終了を相手に通知
         if (this.connection) {

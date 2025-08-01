@@ -79,6 +79,10 @@ class HearApp {
         const clientBackBtn = document.getElementById('clientBackBtn');
         const endCallBtn = document.getElementById('endCallBtn');
         
+        // 受信デバイス用ボタン
+        const receiverAcceptBtn = document.getElementById('receiverAcceptBtn');
+        const receiverDeclineBtn = document.getElementById('receiverDeclineBtn');
+        
         // QR関連の変数
         this.qrCodeInstance = null;
         this.html5QrcodeScanner = null;
@@ -109,6 +113,10 @@ class HearApp {
         hostBackBtn.addEventListener('click', () => this.backToTitle());
         clientBackBtn.addEventListener('click', () => this.backToTitle());
         endCallBtn.addEventListener('click', () => this.endCall());
+        
+        // 受信デバイス用ボタンのイベントリスナー
+        if (receiverAcceptBtn) receiverAcceptBtn.addEventListener('click', () => this.acceptCall());
+        if (receiverDeclineBtn) receiverDeclineBtn.addEventListener('click', () => this.declineCall());
         
         consoleInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -823,26 +831,34 @@ class HearApp {
     }
     
     showIncomingCall(callerName, isRealCall = false, isPseudoCall = false) {
-        const callerNameElement = document.getElementById('callerName');
-        callerNameElement.textContent = this.garbleText(callerName);
-        document.getElementById('callerNumber').textContent = this.generatePhoneNumber();
-        document.getElementById('incomingCall').style.display = 'flex';
-        
-        // 電話番号のリアルタイムアニメーションを開始
-        this.startPhoneNumberAnimation();
+        // 受信デバイスの場合は真っ赤な画面を表示
+        if (this.deviceType === 'client') {
+            document.getElementById('receiverCallScreen').style.display = 'flex';
+            document.getElementById('receiverIncomingButtons').style.display = 'flex';
+            this.consoleLog('Receiver device: showing red screen for incoming call');
+        } else {
+            // 操作デバイスの場合は通常の着信画面を表示
+            const callerNameElement = document.getElementById('callerName');
+            callerNameElement.textContent = this.garbleText(callerName);
+            document.getElementById('callerNumber').textContent = this.generatePhoneNumber();
+            document.getElementById('incomingCall').style.display = 'flex';
+            
+            // 電話番号のリアルタイムアニメーションを開始
+            this.startPhoneNumberAnimation();
+            
+            if (isRealCall) {
+                document.getElementById('incomingCall').dataset.realCall = 'true';
+            }
+            
+            if (isPseudoCall) {
+                document.getElementById('incomingCall').dataset.pseudoCall = 'true';
+                // 着信者名をリアルタイムで文字化けさせる
+                this.startNameGarbling(callerNameElement, callerName);
+            }
+        }
         
         this.playRingtone();
         this.vibrate();
-        
-        if (isRealCall) {
-            document.getElementById('incomingCall').dataset.realCall = 'true';
-        }
-        
-        if (isPseudoCall) {
-            document.getElementById('incomingCall').dataset.pseudoCall = 'true';
-            // 着信者名をリアルタイムで文字化けさせる
-            this.startNameGarbling(callerNameElement, callerName);
-        }
         
         this.consoleLog(`Incoming call from: ${callerName} (real: ${isRealCall}, pseudo: ${isPseudoCall})`);
     }
@@ -961,6 +977,22 @@ class HearApp {
         this.stopNameGarbling();
         this.stopPhoneNumberAnimation();
         
+        // 受信デバイスの場合は既に赤い画面が表示されているので、通話受理を通知してボタンを隠す
+        if (this.deviceType === 'client') {
+            // 着信ボタンを隠す
+            document.getElementById('receiverIncomingButtons').style.display = 'none';
+            
+            if (this.connection) {
+                this.connection.send({
+                    type: 'call_accepted',
+                    callType: 'direct' // 受信デバイスはシンプルに通知するだけ
+                });
+            }
+            this.consoleLog('Call accepted by receiver device');
+            return;
+        }
+        
+        // 操作デバイスの場合の処理
         const incomingCallElement = document.getElementById('incomingCall');
         const isRealCall = incomingCallElement.dataset.realCall === 'true';
         const isPseudoCall = incomingCallElement.dataset.pseudoCall === 'true';
@@ -999,12 +1031,19 @@ class HearApp {
         this.stopPhoneNumberAnimation();
         this.stopAllAudio();
         
-        const incomingCallElement = document.getElementById('incomingCall');
-        incomingCallElement.style.display = 'none';
-        
-        // データセットをクリア
-        delete incomingCallElement.dataset.realCall;
-        delete incomingCallElement.dataset.pseudoCall;
+        // 受信デバイスの場合は赤い画面を非表示し、ボタンも再表示
+        if (this.deviceType === 'client') {
+            document.getElementById('receiverCallScreen').style.display = 'none';
+            document.getElementById('receiverIncomingButtons').style.display = 'flex';
+        } else {
+            // 操作デバイスの場合は着信画面を非表示
+            const incomingCallElement = document.getElementById('incomingCall');
+            incomingCallElement.style.display = 'none';
+            
+            // データセットをクリア
+            delete incomingCallElement.dataset.realCall;
+            delete incomingCallElement.dataset.pseudoCall;
+        }
         
         this.consoleLog('Call declined');
     }
@@ -1080,12 +1119,14 @@ class HearApp {
         
         // 元の画面に戻る
         if (this.deviceType === 'client') {
+            // 受信デバイスの場合は受信待機画面に戻る
             document.getElementById('receiverScreen').style.display = 'block';
-        } else {
+        } else if (this.deviceType === 'host' || this.deviceType === 'controller') {
+            // 操作デバイス（ホスト）の場合は操作画面に戻る
             document.getElementById('controlScreen').style.display = 'block';
         }
         
-        this.consoleLog('Call ended, returned to previous screen');
+        this.consoleLog(`Call ended, returned to previous screen (deviceType: ${this.deviceType})`);
     }
     
     async startRealCall() {

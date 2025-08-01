@@ -24,6 +24,7 @@ class HearApp {
         this.setupPeerJS();
         this.generatePeerId();
         this.setupAudioContext();
+        this.setupVisibilityChangeHandlers();
         this.consoleLog('Hear App initialized');
     }
     
@@ -61,6 +62,7 @@ class HearApp {
         const pseudoCallBtn = document.getElementById('pseudoCallBtn');
         const changeRingtoneBtn = document.getElementById('changeRingtoneBtn');
         const changeVibrationBtn = document.getElementById('changeVibrationBtn');
+        const controlDisconnectBtn = document.getElementById('controlDisconnectBtn');
         const setupBackBtn = document.getElementById('setupBackBtn');
         const consoleInput = document.getElementById('consoleInput');
         const consoleCloseBtn = document.getElementById('consoleCloseBtn');
@@ -93,6 +95,7 @@ class HearApp {
         if (pseudoCallBtn) pseudoCallBtn.addEventListener('click', () => this.initiatePseudoCall());
         if (changeRingtoneBtn) changeRingtoneBtn.addEventListener('click', () => this.changeRingtone());
         if (changeVibrationBtn) changeVibrationBtn.addEventListener('click', () => this.changeVibration());
+        if (controlDisconnectBtn) controlDisconnectBtn.addEventListener('click', () => this.disconnect());
         if (setupBackBtn) setupBackBtn.addEventListener('click', () => this.backToTitle());
         if (consoleCloseBtn) consoleCloseBtn.addEventListener('click', () => this.toggleConsole());
         
@@ -928,6 +931,9 @@ class HearApp {
     showIncomingCall(callerName, isRealCall = false, isPseudoCall = false) {
         // 受信デバイスの場合は真っ赤な画面を表示
         if (this.deviceType === 'client') {
+            // バックグラウンド時の画面復帰処理
+            this.bringToForeground();
+            
             // 着信者情報を設定
             const receiverCallerNameElement = document.getElementById('receiverCallerName');
             const receiverCallerNumberElement = document.getElementById('receiverCallerNumber');
@@ -1346,6 +1352,9 @@ class HearApp {
     initiateDirectCall() {
         if (!this.connection) return;
         
+        // 架電中状態を表示
+        this.updateCallStatus('架電中', '#ff6600');
+        
         this.connection.send({
             type: 'direct_call',
             callerName: this.callerName
@@ -1356,6 +1365,9 @@ class HearApp {
     
     initiatePseudoCall() {
         if (!this.connection) return;
+        
+        // 架電中状態を表示
+        this.updateCallStatus('架電中', '#ff6600');
         
         this.connection.send({
             type: 'pseudo_call',
@@ -1558,6 +1570,74 @@ class HearApp {
         }, 2000);
         
         this.consoleLog('Test ringtone played');
+    }
+    
+    setupVisibilityChangeHandlers() {
+        // ページの可視性変更を監視
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                this.consoleLog('App became visible');
+            } else {
+                this.consoleLog('App became hidden');
+            }
+        });
+        
+        // ウィンドウフォーカス変更を監視
+        window.addEventListener('focus', () => {
+            this.consoleLog('Window focused');
+        });
+        
+        window.addEventListener('blur', () => {
+            this.consoleLog('Window blurred');
+        });
+    }
+    
+    bringToForeground() {
+        try {
+            // ページをフォーカス
+            if (window.focus) {
+                window.focus();
+            }
+            
+            // Service Workerがある場合は通知も送信
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'FOCUS_WINDOW'
+                });
+            }
+            
+            // ページの可視性を変更
+            if (document.hidden) {
+                // バックグラウンドから復帰時の処理
+                this.consoleLog('Bringing app to foreground for incoming call');
+            }
+            
+            // Wake Lock APIを試行（対応している場合）
+            if ('wakeLock' in navigator) {
+                navigator.wakeLock.request('screen').then(wakeLock => {
+                    this.consoleLog('Screen wake lock acquired');
+                    // 着信終了時に解放
+                    setTimeout(() => {
+                        wakeLock.release().then(() => {
+                            this.consoleLog('Screen wake lock released');
+                        });
+                    }, 30000); // 30秒後に自動解放
+                }).catch(err => {
+                    console.warn('Could not acquire wake lock:', err);
+                });
+            }
+            
+            // 画面を最大に表示（フルスクリーン対応）
+            if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.warn('Could not enter fullscreen:', err);
+                });
+            }
+            
+        } catch (error) {
+            console.warn('Could not bring to foreground:', error);
+            this.consoleLog('Failed to bring app to foreground');
+        }
     }
     
     updateCallStatus(text, color = '#ffff00') {

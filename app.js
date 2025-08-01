@@ -851,13 +851,16 @@ class HearApp {
         
         this.connection.on('open', () => {
             console.log('Connection established');
-            this.consoleLog('P2P connection established');
+            this.consoleLog(`P2P connection established - deviceType: ${this.deviceType}`);
             this.showDeviceScreen();
             
-            this.connection.send({
+            const deviceTypeData = {
                 type: 'device_type',
                 deviceType: this.deviceType
-            });
+            };
+            
+            this.consoleLog(`Sending device type: ${JSON.stringify(deviceTypeData)}`);
+            this.connection.send(deviceTypeData);
         });
         
         this.connection.on('data', (data) => {
@@ -886,28 +889,35 @@ class HearApp {
     }
     
     handleIncomingData(data) {
-        this.consoleLog(`Received data: ${JSON.stringify(data)}`);
+        this.consoleLog(`Received data: ${JSON.stringify(data)} - deviceType: ${this.deviceType}`);
         
         switch (data.type) {
             case 'direct_call':
+                this.consoleLog(`Processing direct call from: ${data.callerName || this.callerName}`);
                 this.showIncomingCall(data.callerName || this.callerName);
                 break;
             case 'pseudo_call':
+                this.consoleLog(`Processing pseudo call from: ${data.callerName || this.callerName}`);
                 this.showIncomingCall(data.callerName || this.callerName, false, true);
                 break;
             case 'real_call':
+                this.consoleLog(`Processing real call from: ${data.callerName || this.callerName}`);
                 this.showIncomingCall(data.callerName || this.callerName, true);
                 break;
             case 'end_call':
+                this.consoleLog('Processing end call');
                 this.endCall();
                 break;
             case 'call_accepted':
+                this.consoleLog(`Processing call accepted: ${JSON.stringify(data)}`);
                 this.handleCallAccepted(data);
                 break;
             case 'call_ended':
+                this.consoleLog('Processing call ended');
                 this.handleCallEnded();
                 break;
             case 'call_declined':
+                this.consoleLog('Processing call declined');
                 this.updateCallStatus('通話が拒否されました', '#ff0000');
                 setTimeout(() => {
                     this.updateCallStatus('待機中', '#ffff00');
@@ -922,14 +932,21 @@ class HearApp {
                 this.vibrationPattern = data.vibrationPattern;
                 this.consoleLog(`Vibration pattern updated`);
                 break;
+            case 'device_type':
+                this.consoleLog(`Received device type from peer: ${data.deviceType}`);
+                break;
             case 'settings_update':
                 this.updateSettings(data.settings);
                 break;
+            default:
+                this.consoleLog(`Unknown data type received: ${data.type}`);
         }
     }
     
     showIncomingCall(callerName, isRealCall = false, isPseudoCall = false) {
-        // 受信デバイスの場合は真っ赤な画面を表示
+        this.consoleLog(`showIncomingCall called - deviceType: ${this.deviceType}, callerName: ${callerName}`);
+        
+        // 受信デバイス（client）の場合は真っ赤な画面を表示
         if (this.deviceType === 'client') {
             // バックグラウンド時の画面復帰処理
             this.bringToForeground();
@@ -958,7 +975,7 @@ class HearApp {
             document.getElementById('receiverIncomingButtons').style.display = 'flex';
             this.consoleLog('Receiver device: showing red screen for incoming call');
         } else {
-            // 操作デバイスの場合は通常の着信画面を表示
+            // 操作デバイス（host/controller）の場合は通常の着信画面を表示
             const callerNameElement = document.getElementById('callerName');
             callerNameElement.textContent = this.garbleText(callerName);
             document.getElementById('callerNumber').textContent = this.generatePhoneNumber();
@@ -976,12 +993,14 @@ class HearApp {
                 // 着信者名をリアルタイムで文字化けさせる
                 this.startNameGarbling(callerNameElement, callerName);
             }
+            
+            this.consoleLog('Controller device: showing normal incoming call screen');
         }
         
         this.playRingtone();
         this.vibrate();
         
-        this.consoleLog(`Incoming call from: ${callerName} (real: ${isRealCall}, pseudo: ${isPseudoCall})`);
+        this.consoleLog(`Incoming call displayed - deviceType: ${this.deviceType}, callerName: ${callerName} (real: ${isRealCall}, pseudo: ${isPseudoCall})`);
     }
     
     startNameGarbling(element, originalName) {
@@ -1367,31 +1386,61 @@ class HearApp {
     }
     
     initiateDirectCall() {
-        if (!this.connection) return;
+        this.consoleLog(`initiateDirectCall called - connection: ${!!this.connection}, deviceType: ${this.deviceType}`);
+        
+        if (!this.connection) {
+            this.consoleLog('No connection available for direct call');
+            alert('接続が確立されていません。受信デバイスとの接続を確認してください。');
+            return;
+        }
+        
+        if (!this.connection.open) {
+            this.consoleLog('Connection is not open for direct call');
+            alert('接続が開いていません。受信デバイスとの接続を確認してください。');
+            return;
+        }
         
         // 架電中状態を表示
         this.updateCallStatus('架電中', '#ff6600');
         
-        this.connection.send({
+        const callData = {
             type: 'direct_call',
             callerName: this.callerName
-        });
+        };
         
-        this.consoleLog('Direct call initiated');
+        this.consoleLog(`Sending direct call data: ${JSON.stringify(callData)}`);
+        this.connection.send(callData);
+        
+        this.consoleLog('Direct call initiated and sent');
     }
     
     initiatePseudoCall() {
-        if (!this.connection) return;
+        this.consoleLog(`initiatePseudoCall called - connection: ${!!this.connection}, deviceType: ${this.deviceType}`);
+        
+        if (!this.connection) {
+            this.consoleLog('No connection available for pseudo call');
+            alert('接続が確立されていません。受信デバイスとの接続を確認してください。');
+            return;
+        }
+        
+        if (!this.connection.open) {
+            this.consoleLog('Connection is not open for pseudo call');
+            alert('接続が開いていません。受信デバイスとの接続を確認してください。');
+            return;
+        }
         
         // 架電中状態を表示
         this.updateCallStatus('架電中', '#ff6600');
         
-        this.connection.send({
+        const callData = {
             type: 'pseudo_call',
             callerName: this.callerName
-        });
+        };
         
-        this.consoleLog('Pseudo call initiated');
+        this.consoleLog(`Sending pseudo call data: ${JSON.stringify(callData)}`);
+        this.connection.send(callData);
+        
+        this.consoleLog('Pseudo call initiated and sent');
     }
     
     initiateRealCall() {

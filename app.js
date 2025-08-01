@@ -55,7 +55,6 @@ class HearApp {
         const connectBtn = document.getElementById('connectBtn');
         const receiverBtn = document.getElementById('receiverBtn');
         const controllerBtn = document.getElementById('controllerBtn');
-        const receiverDisconnectBtn = document.getElementById('receiverDisconnectBtn');
         const acceptBtn = document.getElementById('acceptBtn');
         const declineBtn = document.getElementById('declineBtn');
         const callHorrorBtn = document.getElementById('callHorrorBtn');
@@ -88,7 +87,6 @@ class HearApp {
         if (connectBtn) connectBtn.addEventListener('click', () => this.connectToPeer());
         if (receiverBtn) receiverBtn.addEventListener('click', () => this.selectDevice('receiver'));
         if (controllerBtn) controllerBtn.addEventListener('click', () => this.selectDevice('controller'));
-        if (receiverDisconnectBtn) receiverDisconnectBtn.addEventListener('click', () => this.disconnect());
         if (acceptBtn) acceptBtn.addEventListener('click', () => this.acceptCall());
         if (declineBtn) declineBtn.addEventListener('click', () => this.declineCall());
         if (callHorrorBtn) callHorrorBtn.addEventListener('click', () => this.initiateDirectCall());
@@ -250,17 +248,42 @@ class HearApp {
         const buffer = this.audioContext.createBuffer(1, duration * sampleRate, sampleRate);
         const channelData = buffer.getChannelData(0);
         
+        // 着信音のタイプによって異なる音を生成
         for (let i = 0; i < channelData.length; i++) {
             const time = i / sampleRate;
             let sample = 0;
             
-            if (time < 0.5) {
-                sample = Math.sin(time * 800 * Math.PI * 2) * 0.3;
-            } else if (time > 1 && time < 1.5) {
-                sample = Math.sin(time * 800 * Math.PI * 2) * 0.3;
+            switch (this.ringtone) {
+                case 'default':
+                    // デフォルトの着信音
+                    if (time < 0.5) {
+                        sample = Math.sin(time * 800 * Math.PI * 2) * 0.3;
+                    } else if (time > 1 && time < 1.5) {
+                        sample = Math.sin(time * 800 * Math.PI * 2) * 0.3;
+                    }
+                    break;
+                    
+                case 'horror':
+                    // ホラー系の着信音
+                    sample = Math.sin(time * 200 * Math.PI * 2) * 0.2 + 
+                             Math.sin(time * 666 * Math.PI * 2) * 0.1 + 
+                             (Math.random() - 0.5) * 0.05;
+                    if (Math.random() < 0.002) {
+                        sample += (Math.random() - 0.5) * 0.4;
+                    }
+                    break;
+                    
+                case 'classic':
+                    // クラシックな電話の音
+                    const ringFreq = 440; // A音
+                    if ((time % 3) < 1) {
+                        sample = Math.sin(time * ringFreq * Math.PI * 2) * 0.4 * 
+                                Math.sin(time * 10 * Math.PI * 2); // トレモロ効果
+                    }
+                    break;
             }
             
-            channelData[i] = sample;
+            channelData[i] = Math.max(-1, Math.min(1, sample));
         }
         
         this.ringtoneAudio = buffer;
@@ -1335,10 +1358,19 @@ class HearApp {
     
     changeRingtone() {
         const ringtones = ['default', 'horror', 'classic'];
+        const ringtoneNames = {
+            'default': 'デフォルト',
+            'horror': 'ホラー',
+            'classic': 'クラシック'
+        };
+        
         const currentIndex = ringtones.indexOf(this.ringtone);
         this.ringtone = ringtones[(currentIndex + 1) % ringtones.length];
         
-        alert(`着信音を「${this.ringtone}」に変更しました`);
+        // 新しい着信音を再生成
+        this.createRingtoneAudio();
+        
+        alert(`着信音を「${ringtoneNames[this.ringtone]}」に変更しました`);
         this.consoleLog(`Ringtone changed to: ${this.ringtone}`);
     }
     
@@ -1349,13 +1381,25 @@ class HearApp {
             [500, 200, 500]
         ];
         
+        const patternNames = [
+            'ノーマル',
+            'ショート',
+            'ロング'
+        ];
+        
         const currentIndex = patterns.findIndex(p => 
             JSON.stringify(p) === JSON.stringify(this.vibrationPattern)
         );
-        this.vibrationPattern = patterns[(currentIndex + 1) % patterns.length];
+        const nextIndex = (currentIndex + 1) % patterns.length;
+        this.vibrationPattern = patterns[nextIndex];
         
-        alert(`バイブレーションパターンを変更しました`);
-        this.consoleLog(`Vibration pattern changed`);
+        // 新しいパターンをテスト実行
+        if ('vibrate' in navigator) {
+            navigator.vibrate(this.vibrationPattern);
+        }
+        
+        alert(`バイブレーションパターンを「${patternNames[nextIndex]}」に変更しました`);
+        this.consoleLog(`Vibration pattern changed to: ${patternNames[nextIndex]}`);
     }
     
     setCallerName() {
